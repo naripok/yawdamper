@@ -70,7 +70,7 @@ volatile int i = 0;
 volatile int j = 14;
 const int bufferSize = 256;
 //volatile char *data = "Hello, World!\n";
-volatile char data [bufferSize];
+char data [bufferSize];
 
 // SPI communication protocol flags
 volatile char buttonFlag = 'b';
@@ -297,10 +297,16 @@ void loop() {
 //        readSensor();
 //    }
 
-    if (i % 2 == 0)
-        fillBuffer(&sensorFlag, (char*)" 1234");
-    else if (i % 2 != 0)
-        fillBuffer(&buttonFlag, (char*)" 0000");
+//    char b [8];
+    String str;
+
+    str = String(sensorFlag) + " " + String((float)i) + endFlag;
+    str.toCharArray(data, 64);
+
+//    if (i % 2 == 0)
+//        fillBuffer(&sensorFlag, b);
+//    else if (i % 2 != 0)
+//        fillBuffer(&buttonFlag, (char*)" 0000");
 
     sendSPI2(data);
 
