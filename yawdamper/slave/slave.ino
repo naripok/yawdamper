@@ -1,33 +1,50 @@
+/**
+ * Tau, 15/06/2018
+ * Yawdamper slave module
+ *
+ * TODO:
+ *     EEPROM
+ *     Servo
+ *     Display
+ *     Data Transmission
+ */
+
+
 #include <Arduino.h>
 #include <SPI.h>
 #include <Adafruit_SSD1306.h>
 
 
+#define DEBUG
+
+// DISPLAY #############################################################################################################
 // Display macros
 #define OLED_DC                 PB0                 // m3
 #define OLED_CS                 PB2                 // m2
 #define OLED_RESET              PA4                 // m7
 
-// SPI macros
-#define SS PB12   //SPI_2 Chip Select pin is PB12. You can change it to the STM32 pin you want.
-
 // Display vars
 const int DISPLAY_MOD = 1000;
-volatile int i = 0;
+volatile int cycles = 0;
 
-// SPI vars
-uint8 JUNK = 0x00;
-volatile byte pos = 0;
-char *str;
-const int bufferSize = 256;
-
-
-SPIClass SPI_2(2); //Create an instance of the SPI Class called SPI_2 that uses the 2nd SPI Port
+// Display instance
 Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
 
-// Display procedures
-void drawInfo(char *l) {
+// SPI #################################################################################################################
+// SPI macros
+#define SS PB12   //SPI_2 Chip Select pin is PB12. You can change it to the STM32 pin you want.
+
+// SPI vars
+char *str;
+const int bufferSize = 256;
+
+// SPI instance
+SPIClass SPI_2(2); //Create an instance of the SPI Class called SPI_2 that uses the 2nd SPI Port
+
+
+// Display procedures ##################################################################################################
+void drawInfo(char *l, int i) {
     char c;
     int j = 0;
 
@@ -35,7 +52,8 @@ void drawInfo(char *l) {
     display.setTextSize(1);
     display.setTextColor(WHITE);
     display.setCursor(2, 12);
-    display.print(i);
+    display.print(cycles);
+
     for (l; c = *l; l++) {
         display.setCursor(2 + j * 5, 32);
         Serial.println(c);
@@ -45,8 +63,8 @@ void drawInfo(char *l) {
 }
 
 
-void refreshDisplay(char *l) {
-    drawInfo(l);
+void refreshDisplay(char *l, int i) {
+    drawInfo(l, i);
     display.display();
 }
 
@@ -57,7 +75,7 @@ void cfgDisplay(void) {
 }
 
 
-// LED procedures
+// LED procedures ######################################################################################################
 void blinkLED(void) {
     digitalWrite(PB1, !digitalRead(PB1));
 }
@@ -69,8 +87,8 @@ void cfgLED(void) {
     digitalWrite(PB1, HIGH);
 }
 
-// SPI procedures
 
+// SPI procedures ######################################################################################################
 void cfgSPI2(void) {
     // Setup SPI 2
     SPI_2.beginSlave(); //Initialize the SPI_2 port.
@@ -81,37 +99,10 @@ void cfgSPI2(void) {
 }
 
 
-//unsigned int readSPI2(int bytesToRead) {
-//    unsigned long result = 0;   // result to return
-//    byte inByte = 0;           // incoming byte from the SPI
-//
-//    // send a value of 0 to read the first byte returned:
-//    result = SPI_2.read();
-//    // decrement the number of bytes left to read:
-//    bytesToRead--;
-//    // if you still have another byte to read:
-//    if (bytesToRead > 0) {
-//        // shift the first byte left, then get the second byte:
-//        result = result << 8;
-//        inByte = SPI_2.read();
-//        // combine the byte you just got with the previous one:
-//        result = result | inByte;
-//        // decrement the number of bytes left to read:
-//        bytesToRead--;
-//    }
-//    // return the result:
-//    return (result);
-//}
-
-
 char *readSPI2(int bytesToRead) {
     static char buf[bufferSize];
     char c;
 
-    // send a value of 0 to read the first byte returned:
-//    buf[pos++] = SPI_2.read();
-
-//    SPI_2.read();
     // if you still have another byte to read:
     for (int pos = 0; pos < sizeof(buf) - 1; pos++) {
         c = SPI_2.read();
@@ -122,19 +113,21 @@ char *readSPI2(int bytesToRead) {
         }
 
         Serial.print(c);
-        Serial.print(i);
 
         buf[pos] = c;
     }
 
+#ifdef DEBUG
     Serial.println("");
     Serial.println(buf);
+#endif
 
     // return the result:
     return buf;
 }
 
 
+// Main procedures #####################################################################################################
 void setup() {
     cfgLED();
     cfgDisplay();
@@ -148,10 +141,10 @@ void loop() {
     blinkLED();
 
     // increment counters
-    i++;
+    cycles++;
 
-    str = readSPI2(15);
+    str = readSPI2(64);
 
-    refreshDisplay(str);
+    refreshDisplay(str, cycles);
 //    Serial.println(&str);
 } // END LOOP

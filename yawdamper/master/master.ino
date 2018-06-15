@@ -4,6 +4,7 @@
  *
  * TODO:
  *     EEPROM
+ *     Sensor
  *     PID
  *     Data Transmission
  */
@@ -41,6 +42,7 @@ volatile double offsetYaw;                           // offset after calibration
 volatile double alpha = 0.0;                         // exponential filter decay
 volatile int axis = 0;                               // axis selection helper variable
 volatile double* usedAxis = &pitch;                  // pointer to used axis
+volatile int sensorReverse = 1;
 volatile bool mpuInterrupt = false;                  // indicates whether MPU interrupt pin has gone high
 
 // Sensor instance
@@ -61,10 +63,21 @@ SPIClass SPI_2(2);  // Create an instance of the SPI Class called SPI_2 that use
 #define OLED_CS                 PB2                  // m2
 #define OLED_RESET              PA4                  // m7
 
+// DISPLAY #############################################################################################################
 // Display vars
 const int DISPLAY_MOD = 1000;
 volatile int i = 0;
-const char* msg = "Hello, World!\n";
+volatile int j = 14;
+const int bufferSize = 256;
+//volatile char *data = "Hello, World!\n";
+volatile char data [bufferSize];
+
+// SPI communication protocol flags
+volatile char buttonFlag = 'b';
+volatile char sensorFlag = 's';
+volatile char controlFlag = 'c';
+volatile char endFlag = '\n';
+
 
 // Display instance
 Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
@@ -72,47 +85,46 @@ Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
 
 // SPI procedures ######################################################################################################
-void sendCharSPI2(const char* charMsg) {
+void fillBuffer(volatile char *flag, volatile char *msg) {
+
     char c;
+    int index = 0;
 
-    SPI_2.beginTransaction(SPISettings(SPI_CLOCK_DIV16, MSBFIRST, SPI_MODE0));
-    digitalWrite(SS, LOW);                                              // manually take CSN low for SPI_2 transmission
+    // clear buffer
+    for (int pos = 0; pos <= bufferSize; pos++)
+        data[pos] = 0;
 
-    // send test string
-    for (int p = 0; c = charMsg[p]; p++) {
-        delayMicroseconds(15);
-        SPI_2.write(c);
+    // define data time by assigning the proper flag
+    data[index++] = *flag;
 
-        // Show activity
-        blinkLED();
-        refreshDisplay(c);
-        Serial.print(c);
-        // increment counters
-        i++;
+    // assign msg body to buffer
+    for (msg; c = *msg; msg++) {
+        data[index++] = c;
     }
 
-    digitalWrite(SS, HIGH);                                             // manually take CSN high between spi transmissions
-    SPI_2.endTransaction();                                             // transaction over
+    // assign end flag
+    data[index] = endFlag;
 }
 
 
-void sendIntSPI2(const int* intMsg) {
+void sendSPI2(volatile char *msg) {
     char c;
+
+//    j = strlen(msg);
 
     SPI_2.beginTransaction(SPISettings(SPI_CLOCK_DIV16, MSBFIRST, SPI_MODE0));
     digitalWrite(SS, LOW);                                              // manually take CSN low for SPI_2 transmission
 
     // send test string
     for (int p = 0; c = msg[p]; p++) {
-        delayMicroseconds(15);
+        delayMicroseconds(10);
         SPI_2.write(c);
 
         // Show activity
         blinkLED();
         refreshDisplay(c);
-        Serial.print(c);
-        // increment counters
         i++;
+        delay(100);
     }
 
     digitalWrite(SS, HIGH);                                             // manually take CSN high between spi transmissions
@@ -131,109 +143,109 @@ void cfgSPI2(void) {
 
 
 // Sensor procedures ###################################################################################################
-void DataReady(void) {
-    mpuInterrupt = true;
-}
-
-
-void readSensor(void) {
-    /**
-     * Reads the values from the sensor to be
-     * stored at pitch, roll and yaw
-     */
-
-    // Read sensor
-    Vector norm = mpu.readNormalizeAccel();
-
-    // Apply exponential filtering to chosen axis
-    pitch = (pitch * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (norm.YAxis - offsetPitch));
-    roll = (roll * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (norm.XAxis - offsetRoll));
-    yaw = (yaw * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (norm.ZAxis - offsetYaw));
-
-    // Update interruption flag
-    mpuInterrupt = false;
-}
-
-
-void cfgSensor(void) {
-    /* Configures MPU6050.
-    */
-
-    // Configure controller VCC pin as output
-    pinMode(SENSOR_VCC, OUTPUT);
-
-    // Config interruption pin
-    // Set INT controller port to input and attach interruption to it
-    pinMode(INT_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(INT_PIN), dmpDataReady, FALLING);
-
-    // Feed watchdog
-    iwdg_feed();
-
-    // Power cycle MPU for fresh start
-    digitalWrite(SENSOR_VCC, LOW);
-    for (int i = 50; i > 0; i--) {
-        iwdg_feed();
-        delay(1);
-    }
-    digitalWrite(SENSOR_VCC, HIGH);
-    for (int i = 100; i > 0; i--) {
-        iwdg_feed();
-        delay(1);
-    }
-
-    // Initialize MPU6050
-    while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
-        // While not initialized, display error msg
-        display.clearDisplay();
-        display.setTextSize(1);
-        display.setTextColor(WHITE);
-        display.setCursor(12, 25);
-        display.println("FALHA NO SENSOR");
-        display.display();
-        delay(1);
-    };
-
-    // Configure mpu
-    mpu.writeRegister8(0x24, 0b00001001);               // 400khz clock
-    mpu.setDLPFMode(DLPF);                              // Set low pass filter band
-    mpu.setTempEnabled(false);                          // disable temperature sensor
-    mpu.setAccelPowerOnDelay(MPU6050_DELAY_3MS);        // delay start for compatibility issues
-
-    mpu.writeRegister8(0x23, 0b00000000);               // Disable FIFO queues
-    mpu.writeRegister8(0x37, 0b10110000);               // Interruption pin config
-    mpu.writeRegister8(0x38, 0b00000001);               // Interruption config
-
-//    // Read offsets from EEPROM
-//    offsetPitch = readEEPROM(OFFSET_PITCH_ADDRESS);
-//    offsetRoll = readEEPROM(OFFSET_ROLL_ADDRESS);
-//    offsetYaw = readEEPROM(OFFSET_YAW_ADDRESS);
+//void DataReady(void) {
+//    mpuInterrupt = true;
+//}
 //
-//    // Read used axis from EEPROM
-//    axis = readEEPROM(AXIS_ADDRESS);
-
-    // Update pointer to used axis
-    if (axis == 0) {
-        usedAxis = &pitch;
-    } else if (axis == 1) {
-        usedAxis = &roll;
-    } else if (axis == 2) {
-        usedAxis = &yaw;
-    }
-}
-
+//
+//void readSensor(void) {
+//    /**
+//     * Reads the values from the sensor to be
+//     * stored at pitch, roll and yaw
+//     */
+//
+//    // Read sensor
+//    Vector norm = mpu.readNormalizeAccel();
+//
+//    // Apply exponential filtering to chosen axis
+//    pitch = (pitch * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (norm.YAxis - offsetPitch));
+//    roll = (roll * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (norm.XAxis - offsetRoll));
+//    yaw = (yaw * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (norm.ZAxis - offsetYaw));
+//
+//    // Update interruption flag
+//    mpuInterrupt = false;
+//}
+//
+//
+//void cfgSensor(void) {
+//    /* Configures MPU6050.
+//    */
+//
+//    // Configure controller VCC pin as output
+//    pinMode(SENSOR_VCC, OUTPUT);
+//
+//    // Config interruption pin
+//    // Set INT controller port to input and attach interruption to it
+//    pinMode(INT_PIN, INPUT_PULLUP);
+//    attachInterrupt(digitalPinToInterrupt(INT_PIN), dmpDataReady, FALLING);
+//
+//    // Feed watchdog
+////    iwdg_feed();
+//
+//    // Power cycle MPU for fresh start
+//    digitalWrite(SENSOR_VCC, LOW);
+//    for (int i = 50; i > 0; i--) {
+//        iwdg_feed();
+//        delay(1);
+//    }
+//    digitalWrite(SENSOR_VCC, HIGH);
+//    for (int i = 100; i > 0; i--) {
+//        iwdg_feed();
+//        delay(1);
+//    }
+//
+//    // Initialize MPU6050
+//    while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
+//        // While not initialized, display error msg
+//        display.clearDisplay();
+//        display.setTextSize(1);
+//        display.setTextColor(WHITE);
+//        display.setCursor(12, 25);
+//        display.println("FALHA NO SENSOR");
+//        display.display();
+//        delay(1);
+//    };
+//
+//    // Configure mpu
+//    mpu.writeRegister8(0x24, 0b00001001);               // 400khz clock
+//    mpu.setDLPFMode(DLPF);                              // Set low pass filter band
+//    mpu.setTempEnabled(false);                          // disable temperature sensor
+//    mpu.setAccelPowerOnDelay(MPU6050_DELAY_3MS);        // delay start for compatibility issues
+//
+//    mpu.writeRegister8(0x23, 0b00000000);               // Disable FIFO queues
+//    mpu.writeRegister8(0x37, 0b10110000);               // Interruption pin config
+//    mpu.writeRegister8(0x38, 0b00000001);               // Interruption config
+//
+////    // Read offsets from EEPROM
+////    offsetPitch = readEEPROM(OFFSET_PITCH_ADDRESS);
+////    offsetRoll = readEEPROM(OFFSET_ROLL_ADDRESS);
+////    offsetYaw = readEEPROM(OFFSET_YAW_ADDRESS);
+////
+////    // Read used axis from EEPROM
+////    axis = readEEPROM(AXIS_ADDRESS);
+//
+//    // Update pointer to used axis
+//    if (axis == 0) {
+//        usedAxis = &pitch;
+//    } else if (axis == 1) {
+//        usedAxis = &roll;
+//    } else if (axis == 2) {
+//        usedAxis = &yaw;
+//    }
+//}
+//
 
 // Display procedures ##################################################################################################
 void drawInfo(char l) {
-    if (i % 14 == 0) {
+    if (i % j == 0) {
         display.clearDisplay();
         display.setTextSize(1);
         display.setTextColor(WHITE);
     }
 
-    display.setCursor(2 + (i % 10) * 5, 12);
-    display.print(i % 10);
-    display.setCursor(2 + (i % 14) * 5, 32);
+    display.setCursor(2 + (i % j) * 5, 12);
+    display.print(i % j);
+    display.setCursor(2 + (i % j) * 5, 32);
     display.print(l);
 
     display.fillRect(2, 50, 128, 64, BLACK);
@@ -285,7 +297,12 @@ void loop() {
 //        readSensor();
 //    }
 
-    sendCharSPI2(msg);
+    if (i % 2 == 0)
+        fillBuffer(&sensorFlag, (char*)" 1234");
+    else if (i % 2 != 0)
+        fillBuffer(&buttonFlag, (char*)" 0000");
 
-    delay(500);
+    sendSPI2(data);
+
+    delay(100);
 } // END LOOP
