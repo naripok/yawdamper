@@ -1,0 +1,7 @@
+Alterações Headers:
+	Leitura pura do sensor na MPU6050.cpp (trocou de uint16 pra int16)
+	Frequência de operação do servo no servo.cpp (período de 20ms pra 20/6 ms)
+	
+Programas:
+	Para utilzar os outros eixos basta trocar o ponteiro (usedAxis)
+	entretando deve-se comentar adequadamente a escrita(calibração) e leitura (cfg)

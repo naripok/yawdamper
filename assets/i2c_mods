@@ -1,0 +1,7 @@
+Tau, 10/06/2018
+
+Yawdamper module's I²C modifications
+
+mpu6050.cpp -> begin => Wire.setClock(400000);
+Wire.cpp -> TwoWire::process => i2c_bus_reset(sel_hard);
+

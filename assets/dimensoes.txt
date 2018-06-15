@@ -1,0 +1,18 @@
+buraco menor
+  buraco = 39.6x16.3mm
+  moldura = 54x20.6mm
+  distancia entre centros parafusos = 46.1x12.8mm
+  medidas parafuso
+    diametro cabeça = 5.5mm
+    diametro rosca = 2.8mm 
+    comprimento = 17.6mm
+
+buraco maior
+  buraco = 69.2x19 mm
+  moldura = x mm
+  distancia entre centros parafusos = 82.5mm
+  medidas parafuso
+    diametro cabeça = 0.79m
+    diametro rosca = mm 
+    comprimento = mm
+
