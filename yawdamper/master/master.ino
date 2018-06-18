@@ -178,8 +178,8 @@ Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
 // Servo vars
 const int SERVO_MOD = 21;
-const int SERVO_MIN_DEG = 35;
-const int SERVO_MAX_DEG = 145;
+const int SERVO_MIN_DEG = 0;
+const int SERVO_MAX_DEG = 180;
 volatile int pos = 90;                               // position in degrees
 volatile float trimValue = 0;                        // value of output when pid is on manual mode
 
@@ -442,7 +442,7 @@ void cfgServo(void) {
     /* Configures the servo.
     */
 //    servo.attach(SERVO_PIN, 5000 - 2400, 5000 - 544, 0, 180);
-    servo.attach(SERVO_PIN, 1000, 2000, 35, 145);
+    servo.attach(SERVO_PIN, 1000, 2000, 0, 180);
     servo.write(convert_output(trimValue));
 }
 
@@ -526,10 +526,10 @@ void printControl(void) {
 //    display.println(int(temp));
 
     // Time overflow counter
-    display.setCursor(52 + xOffset, 4 + yOffset);
-    display.println("OF");
-    display.setCursor(65 + xOffset, 4 + yOffset);
-    display.println(overflowCounter);
+    display.setCursor(32 + xOffset, 4 + yOffset);
+    display.println("TO");
+    display.setCursor(45 + xOffset, 4 + yOffset);
+    display.println((millis() - initTime) / 1000);
 
     // Ball
     display.fillCircle(constrain(int(56 + *usedAxis * (258 / (2 * G))) + xOffset, 14 + xOffset, 98 + xOffset), 22 + yOffset, 5, WHITE);
@@ -1066,7 +1066,6 @@ void loop() {
         driveServo();
 
     } else if (i % DISPLAY_MOD == 0) {
-//        refreshDisplay(pos, (millis() - initTime) / 1000, 1000000.0 / (micros() - time));
         refreshScreen();
 
     } else if (i % B_MOD == 0) {
