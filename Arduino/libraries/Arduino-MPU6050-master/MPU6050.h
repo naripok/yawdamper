@@ -235,7 +235,7 @@ class MPU6050
 	void setThreshold(uint8_t multiple = 1);
 	uint8_t getThreshold(void);
 
-	Vector readRawGyro(void);
+	SignedVector readRawGyro(void);
 	Vector readNormalizeGyro(void);
 
 	SignedVector readRawAccel(void);
@@ -256,7 +256,7 @@ class MPU6050
 	
     private:
 	SignedVector ra; // Raw accelerometer vector
-	Vector rg; // Raw gyroscope vector
+	SignedVector rg; // Raw gyroscope vector
 	Vector na, ng; // Normalized vectors
 	Vector tg, dg; // Threshold and Delta for Gyro
 	Vector th;     // Threshold

@@ -424,7 +424,7 @@ Vector MPU6050::readSignedAccel(void)
     return na;
 }
 
-Vector MPU6050::readRawGyro(void)
+SignedVector MPU6050::readRawGyro(void)
 {
     Wire.beginTransmission(mpuAddress);
     #if ARDUINO >= 100
