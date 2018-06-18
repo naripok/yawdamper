@@ -146,7 +146,7 @@ PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/10, pidMode);
 #define OLED_RESET              PA4                  // m7
 
 // Display vars
-const int DISPLAY_MOD = 107;
+const int DISPLAY_MOD = 22;
 volatile long i = 0;
 volatile long time = millis();
 volatile long initTime = time;
@@ -171,7 +171,7 @@ Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 #define SERVO_PIN               PA1                  // m27
 
 // Servo vars
-const int SERVO_MOD = 51;
+const int SERVO_MOD = 21;
 const int SERVO_MIN_DEG = 35;
 const int SERVO_MAX_DEG = 145;
 volatile int pos = 90;                               // position in degrees
@@ -188,7 +188,7 @@ Servo servo;
 #define MINUS_PIN               PB11                 // m0
 
 // Buttons vars
-const int B_MOD = 106;
+const int B_MOD = 57;
 volatile bool onOff;
 volatile bool pidOnOff;
 volatile bool minusB;
@@ -263,6 +263,7 @@ void calibrateAccelerometer(void) {
      saving the mean to the offset variables.
     */
 
+    iwdg_feed();
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(WHITE);
@@ -280,21 +281,20 @@ void calibrateAccelerometer(void) {
     double offset2 = 0;
     double offset3 = 0;
 
-    int i = 0;
-    while (i <= CALIBRATION_SAMPLES) {
-        if (digitalRead(INT_PIN)) {
-            iwdg_feed();
-            i++;
-            normC = mpu.readNormalizeAccel();
+    int k = 0;
+    while (k <= CALIBRATION_SAMPLES) {
+        iwdg_feed();
+        delay(1);
+        k++;
+        normC = mpu.readNormalizeAccel();
 
-            offset1 += normC.YAxis;
-            offset2 += normC.XAxis;
-            offset3 += normC.ZAxis;
-        }
+        offset1 += normC.YAxis;
+        offset2 += normC.XAxis;
+        offset3 += normC.ZAxis;
 
-        if (i % 10 == 0) {
+        if (k % 10 == 0) {
             display.drawRect(16, 24, 97, 20, WHITE);
-            display.fillRect(16, 24, (1 + (i / double(CALIBRATION_SAMPLES)) * 96), 20, WHITE);
+            display.fillRect(16, 24, (1 + (k / double(CALIBRATION_SAMPLES)) * 96), 20, WHITE);
             display.display();
         }
     }
@@ -358,13 +358,13 @@ void cfgSensor(void) {
 //    mpu.writeRegister8(0x37, 0b00010000);               // Interruption pin config
 //    mpu.writeRegister8(0x38, 0b00000001);               // Interruption config
 
-//    // Read offsets from EEPROM
-//    offsetPitch = readEEPROM(OFFSET_PITCH_ADDRESS);
-//    offsetRoll = readEEPROM(OFFSET_ROLL_ADDRESS);
-//    offsetYaw = readEEPROM(OFFSET_YAW_ADDRESS);
-//
-//    // Read used axis from EEPROM
-//    axis = readEEPROM(AXIS_ADDRESS);
+    // Read offsets from EEPROM
+    offsetPitch = readEEPROM(OFFSET_PITCH_ADDRESS);
+    offsetRoll = readEEPROM(OFFSET_ROLL_ADDRESS);
+    offsetYaw = readEEPROM(OFFSET_YAW_ADDRESS);
+
+    // Read used axis from EEPROM
+    axis = readEEPROM(AXIS_ADDRESS);
 
     // Update pointer to used axis
     if (axis == 0) {
@@ -428,7 +428,7 @@ void cfgServo(void) {
     /* Configures the servo.
     */
 //    servo.attach(SERVO_PIN, 5000 - 2400, 5000 - 544, 0, 180);
-    servo.attach(SERVO_PIN, 1000, 2000, 0, 180);
+    servo.attach(SERVO_PIN, 1000, 2000, 35, 145);
     servo.write(convert_output(trimValue));
 }
 
@@ -977,12 +977,29 @@ void cfgEEPROM(void) {
 }
 
 
+// LED PROCEDURES ######################################################################################################
+void blinkLED(void) {
+    digitalWrite(PB1, !digitalRead(PB1));
+    digitalWrite(PB12, !digitalRead(PB12));
+}
+
+
+void cfgLED(void) {
+    // Flash LED
+    pinMode(PB1, OUTPUT);
+    digitalWrite(PB1, HIGH);
+    pinMode(PB12, OUTPUT);
+    digitalWrite(PB12, HIGH);
+}
+
 
 /**
  * MAIN PROCEDURES #####################################################################################################
  */
 
 void setup() {
+    cfgLED();
+
     cfgDisplay();
     cfgEEPROM();
 
@@ -1008,19 +1025,17 @@ void loop() {
     if (i % SENSOR_MOD == 0) {
         readSensor();
         computePID();
+        blinkLED();
 
     } else if (i % SERVO_MOD == 0) {
-//        pos++;
-//        if (pos == 9)
-//            pos = -9;
         driveServo();
-
-    } else if (i % B_MOD == 0) {
-        processInterface();
 
     } else if (i % DISPLAY_MOD == 0) {
 //        refreshDisplay(pos, (millis() - initTime) / 1000, 1000000.0 / (micros() - time));
         refreshScreen();
+
+    } else if (i % B_MOD == 0) {
+        processInterface();
         i = 0;
 
     } else {
@@ -1028,5 +1043,5 @@ void loop() {
 
     }
 
-    time = micros();
+//    time = micros();
 } // END LOOP
