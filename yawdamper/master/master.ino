@@ -76,6 +76,11 @@
  * #####################################################################################################################
  */
 
+
+// Time ################################################################################################################
+long loopTime = 2500;
+volatile long i = 1;
+
 // Watchdog ############################################################################################################
 #define IWDG_NUM                100
 #define IWDG_PRESCALER          IWDG_PRE_256
@@ -92,7 +97,8 @@
 #define DLPF                    MPU6050_DLPF_6       // 5hz - 19ms delay
 
 // Sensor vars
-const int SENSOR_MOD = 5;
+//const int SENSOR_MOD = 5;
+const int SENSOR_MOD = 2;
 const int CALIBRATION_SAMPLES = 5000;                // calibration mean n of samples
 const float G = 9.80665;                             // gravity as written in the sensor header
 
@@ -126,7 +132,7 @@ MPU6050 mpu;
 
 // PID #################################################################################################################
 // Time step vars
-const double PID_FREQ = 100;
+const double PID_FREQ = 60;
 const double TIME_STEP = 1 / PID_FREQ;
 double input = 0.0;
 double output = 0.0;
@@ -152,8 +158,8 @@ PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/10, pidMode);
 #define OLED_RESET              PA4                  // m7
 
 // Display vars
-const int DISPLAY_MOD = 22;
-volatile long i = 0;
+//const int DISPLAY_MOD = 23;
+const int DISPLAY_MOD = 5;
 volatile long time = millis();
 volatile long initTime = time;
 
@@ -177,7 +183,8 @@ Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 #define SERVO_PIN               PA1                  // m27
 
 // Servo vars
-const int SERVO_MOD = 21;
+//const int SERVO_MOD = 11;
+const int SERVO_MOD = 3;
 const int SERVO_MIN_DEG = 0;
 const int SERVO_MAX_DEG = 180;
 volatile int pos = 90;                               // position in degrees
@@ -194,7 +201,8 @@ Servo servo;
 #define MINUS_PIN               PB11                 // m0
 
 // Buttons vars
-const int B_MOD = 57;
+//const int B_MOD = 49;
+const int B_MOD = 7;
 volatile bool onOff;
 volatile bool pidOnOff;
 volatile bool minusB;
@@ -532,13 +540,13 @@ void printControl(void) {
     display.println((millis() - initTime) / 1000);
 
     // Ball
-    display.fillCircle(constrain(int(56 + *usedAxis * (258 / (2 * G))) + xOffset, 14 + xOffset, 98 + xOffset), 22 + yOffset, 5, WHITE);
+    display.fillCircle(constrain(int(56.2 + *usedAxis * (258 / (2 * G))) + xOffset, 14 + xOffset, 98 + xOffset), 22 + yOffset, 5, WHITE);
 
     // Gyro
-    display.fillRect(constrain(int(55 + *usedGAxis * (96 / (2 * G))) + xOffset, 9 + xOffset, 101 + xOffset), 36 + yOffset, 3, 6, WHITE);
+    display.fillRect(constrain(int(55.2 + *usedGAxis * (96 / (2 * G))) + xOffset, 9 + xOffset, 101 + xOffset), 37 + yOffset, 3, 6, WHITE);
 
     // Yaw position
-    display.fillRect(constrain(int(55 - filteredOutput * (96 / (2 * G))) + xOffset, 9 + xOffset, 101 + xOffset), 44 + yOffset, 3, 6, WHITE);
+    display.fillRect(constrain(int(55.2 - filteredOutput * (96 / (2 * G))) + xOffset, 9 + xOffset, 101 + xOffset), 44 + yOffset, 3, 6, WHITE);
 
     // Markers
     if (pidOn) {
@@ -1051,6 +1059,9 @@ void setup() {
 
 void loop() {
 
+    // Keep initial loop time
+    time = micros();
+
     // Feed the dog...
     iwdg_feed();
 
@@ -1070,12 +1081,15 @@ void loop() {
 
     } else if (i % B_MOD == 0) {
         processInterface();
-        i = 0;
+        i = 1;
 
-    } else {
-        delay(1);
+//    } else {
+//        delayMicroseconds(1000);
+//        delay(1);
 
     }
 
-//    time = micros();
+    // Wait for loop to complete
+    delayMicroseconds(loopTime - (micros() - time));
+
 } // END LOOP
