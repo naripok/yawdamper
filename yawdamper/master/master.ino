@@ -393,8 +393,8 @@ void cfgSensor(void) {
 
     // Feed watchdog
     iwdg_feed();
-    mpu.setThreshold(1);
-    mpu.calibrateGyro(50);
+    mpu.setThreshold(0.1);
+//    mpu.calibrateGyro(50);
 }
 
 
