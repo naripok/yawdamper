@@ -78,11 +78,12 @@
 
 
 // Time ################################################################################################################
-long loopTime = 3000;
+volatile long loopTime = 2500;
 volatile long i = 1;
+volatile long waitTime = 0;
 
 // Watchdog ############################################################################################################
-#define IWDG_NUM                100
+#define IWDG_NUM                200
 #define IWDG_PRESCALER          IWDG_PRE_256
 
 
@@ -160,8 +161,8 @@ PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/10, pidMode);
 // Display vars
 //const int DISPLAY_MOD = 23;
 const int DISPLAY_MOD = 5;
-volatile long time = millis();
-volatile long initTime = time;
+volatile long time = micros();
+volatile long initTime = time / 1000;
 
 volatile int j = 0; // activity counter
 const int MSG_DELAY = 20;
@@ -534,10 +535,10 @@ void printControl(void) {
 //    display.println(int(temp));
 
     // Time overflow counter
-    display.setCursor(32 + xOffset, 4 + yOffset);
-    display.println("TO");
-    display.setCursor(45 + xOffset, 4 + yOffset);
-    display.println((millis() - initTime) / 1000);
+    display.setCursor(28 + xOffset, 4 + yOffset);
+    display.println("TON");
+    display.setCursor(48 + xOffset, 4 + yOffset);
+    display.println((millis() - initTime) / 60000);
 
     // Ball
     display.fillCircle(constrain(int(56.2 + *usedAxis * (258 / (2 * G))) + xOffset, 14 + xOffset, 98 + xOffset), 22 + yOffset, 5, WHITE);
@@ -1041,7 +1042,7 @@ void cfgLED(void) {
  */
 
 void setup() {
-    cfgLED();
+//    cfgLED();
 
     cfgDisplay();
     cfgEEPROM();
@@ -1058,12 +1059,11 @@ void setup() {
 
 
 void loop() {
+    // Feed the dog...
+    iwdg_feed();
 
     // Keep initial loop time
     time = micros();
-
-    // Feed the dog...
-    iwdg_feed();
 
     // Increase counter
     i++;
@@ -1071,7 +1071,7 @@ void loop() {
     if (i % SENSOR_MOD == 0) {
         readSensor();
         computePID();
-        blinkLED();
+//        blinkLED();
 
     } else if (i % SERVO_MOD == 0) {
         driveServo();
@@ -1090,6 +1090,12 @@ void loop() {
     }
 
     // Wait for loop to complete
-    delayMicroseconds(loopTime - (micros() - time));
+    waitTime = (loopTime - (micros() - time)) / 10;
+
+    for (int m = 0; m < 10, m++;) {
+        // Feed the dog...
+        iwdg_feed();
+        delayMicroseconds(waitTime);
+    }
 
 } // END LOOP
