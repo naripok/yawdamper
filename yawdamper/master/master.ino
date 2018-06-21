@@ -17,13 +17,13 @@
  *      PA4  -> RES
  *      PA5  -> SCK
  *      PA7  -> SDA
- *      PB0  -> DC
- *      PB2  -> CS
+ *      PA3/mPB0  -> DC
+ *      PA2/mPB2  -> CS
  *
  *  BUTTONS
  *      PB10 -> PLUS  -> PIN12
  *      PB11 -> MINUS -> PIN11
- *      PB3  -> MODE  -> PIN13
+ *      PB1/mPB3  -> MODE  -> PIN13
  *
  *  SENSOR
  *      PB12 -> INT   -> PIN1
@@ -65,7 +65,18 @@
 #include <MPU6050.h>
 #include <PID_v1.h>
 #include <Servo.h>
+#include <Wire.h>
 #include <libmaple/iwdg.h>
+#include <HardwareTimer.h>
+#include <libmaple/i2c.h>
+#include <libmaple/systick.h>
+#include <libmaple/nvic.h>
+//#include <series/nvic.h>
+#include "stm32f1/include/series/nvic.h"
+#include <libmaple/libmaple.h>
+#include <libmaple/rcc.h>
+#include <libmaple/util.h>
+#include <libmaple/scb.h>
 
 
 /**
@@ -83,7 +94,7 @@ volatile long i = 1;
 volatile long waitTime = 0;
 
 // Watchdog ############################################################################################################
-#define IWDG_NUM                200
+#define IWDG_NUM                300
 #define IWDG_PRESCALER          IWDG_PRE_256
 
 
@@ -91,10 +102,10 @@ volatile long waitTime = 0;
 // Sensor macros
 // #define SENSOR_SCL           PB6                  // m16
 // #define SENSOR_SDA           PB7                  // m15
-#define SENSOR_VCC              PA9                  // m26
-#define INT_PIN                 PA8                  // m27
-#define SDA                     PA7                  // m4
-#define SCL                     PA5                  // m6
+#define SENSOR_VCC              PB4                  // m26
+#define INT_PIN                 PB12//PA8                  // m27
+#define SDA                     PB7//PA7                  // m4
+#define SCL                     PB6//PA5                  // m6
 #define DLPF                    MPU6050_DLPF_6       // 5hz - 19ms delay
 
 // Sensor vars
@@ -154,9 +165,9 @@ PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/10, pidMode);
 
 // DISPLAY #############################################################################################################
 // Display macros
-#define OLED_DC                 PB0                  // m3
-#define OLED_CS                 PB2                  // m2
-#define OLED_RESET              PA4                  // m7
+#define OLED_DC                 PA3//PB0                  // m3
+#define OLED_CS                 PA2//PB2                  // m2
+#define OLED_RESET              PA4                       // m7
 
 // Display vars
 //const int DISPLAY_MOD = 23;
@@ -181,7 +192,7 @@ Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
 // SERVO ###############################################################################################################
 // Servo macros
-#define SERVO_PIN               PA1                  // m27
+#define SERVO_PIN               PA10//PA1                  // m27
 
 // Servo vars
 //const int SERVO_MOD = 11;
@@ -197,7 +208,7 @@ Servo servo;
 
 // BUTTONS #############################################################################################################
 // Buttons macros
-#define ON_OFF_PIN              PB3                  // m19
+#define ON_OFF_PIN              PB1//PB3                  // m19
 #define PLUS_PIN                PB10                 // m1
 #define MINUS_PIN               PB11                 // m0
 
@@ -242,6 +253,9 @@ uint16 dataRead;
 uint16 eepromStatus;
 
 
+//// TIMER
+//HardwareTimer sensorWtdg(4);
+
 // END MEMORY MANAGEMENT ###############################################################################################
 
 
@@ -252,6 +266,78 @@ uint16 eepromStatus;
  * ###                                                                                                               ###
  * #####################################################################################################################
  */
+
+// FAULT HANDLING ######################################################################################################
+#define DEBUG_LEVEL DEBUG_NONE
+//#define I2C_DEBUG
+
+#define LED_PIN                 PC13
+#define PROBE_PIN               PA15
+#define PROBE2_PIN              PB13
+#define SENSOR_IWDG             20000
+
+volatile bool canRead = true;
+volatile int intCount = 0;
+
+
+void cfgProbes(void) {
+    pinMode(PROBE_PIN, OUTPUT);
+    digitalWrite(PROBE_PIN, HIGH);
+    pinMode(PROBE2_PIN, OUTPUT);
+    digitalWrite(PROBE2_PIN, HIGH);
+}
+
+void flipP1(void) {
+    digitalWrite(PROBE_PIN, !digitalRead(PROBE_PIN));
+}
+
+void flipP2(void) {
+    digitalWrite(PROBE2_PIN, !digitalRead(PROBE2_PIN));
+}
+
+// TIMER PROCEDURES ####################################################################################################
+
+#define T                   Timer3
+#define c                   1
+
+void cfgSensorWtdg(void) {
+    T.setPeriod(SENSOR_IWDG);
+    T.attachInterrupt(c, resetSensor);
+
+//    nvic_irq_disable(NVIC_I2C1_ER);
+//    nvic_irq_disable(NVIC_HARDFAULT);
+//    nvic_irq_disable(NVIC_BUS_FAULT);
+//    nvic_irq_disable(NVIC_USAGE_FAULT);
+
+}
+
+
+void resetSensor(void) {
+
+    intCount++;
+    flipP2();
+
+//    I2C1->state = I2C_STATE_ERROR;
+
+    digitalWrite(SENSOR_VCC, LOW);
+
+    digitalWrite(SCL, LOW);
+    delay_us(10);
+    digitalWrite(SCL, HIGH);
+
+    digitalWrite(SENSOR_VCC, HIGH);
+
+    nvic_globalirq_enable();
+
+    canRead = false;
+
+}
+
+
+void feedSensorWtdg(void) {
+    T.refresh();
+}
+
 
 // SENSOR PROCEDURES ###################################################################################################
 void readSensor(void) {
@@ -329,6 +415,10 @@ void cfgSensor(void) {
     /* Configures MPU6050.
     */
 
+    // Feed watchdog
+    iwdg_feed();
+    feedSensorWtdg();
+
     // Configure controller VCC pin as output
     pinMode(SENSOR_VCC, OUTPUT);
 
@@ -337,18 +427,16 @@ void cfgSensor(void) {
     pinMode(INT_PIN, INPUT_PULLUP);
 //    attachInterrupt(digitalPinToInterrupt(INT_PIN), dataReady, FALLING);
 
-    // Feed watchdog
-    iwdg_feed();
-
     // Power cycle MPU for fresh start
     digitalWrite(SENSOR_VCC, LOW);
-    delay(50);
+    delay_us(1000);
 
     digitalWrite(SENSOR_VCC, HIGH);
-    delay(50);
+    delay_us(2000);
 
     // Initialize MPU6050
     while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
+
         // While not initialized, display error msg
         display.clearDisplay();
         display.setTextSize(1);
@@ -366,7 +454,7 @@ void cfgSensor(void) {
 
     mpu.setDLPFMode(DLPF);                              // Set low pass filter band
     mpu.setTempEnabled(false);                          // disable temperature sensor
-    mpu.setAccelPowerOnDelay(MPU6050_DELAY_3MS);        // delay start for compatibility issues
+    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);        // delay start for compatibility issues
 
     mpu.writeRegister8(0x23, 0b00000000);               // Disable FIFO queues
 //    mpu.writeRegister8(0x37, 0b00010000);               // Interruption pin config
@@ -394,7 +482,10 @@ void cfgSensor(void) {
 
     // Feed watchdog
     iwdg_feed();
+    feedSensorWtdg();
+
     mpu.setThreshold(0.1);
+
 //    mpu.calibrateGyro(50);
 }
 
@@ -538,7 +629,10 @@ void printControl(void) {
     display.setCursor(28 + xOffset, 4 + yOffset);
     display.println("TON");
     display.setCursor(48 + xOffset, 4 + yOffset);
-    display.println((millis() - initTime) / 60000);
+//    display.println((millis() - initTime) / 60000);
+//    display.println(systick_uptime() / 1000);
+    display.println(intCount);
+
 
     // Ball
     display.fillCircle(constrain(int(56.2 + *usedAxis * (258 / (2 * G))) + xOffset, 14 + xOffset, 98 + xOffset), 22 + yOffset, 5, WHITE);
@@ -697,7 +791,15 @@ void printError(void) {
 
 void cfgDisplay(void) {
     display.begin(SSD1306_SWITCHCAPVCC);
+
     display.clearDisplay();
+    display.setTextSize(3);
+    display.setTextColor(WHITE);
+
+    display.setCursor(8, 8);
+    display.println("NOCTUA");
+
+    // Print
     display.display();
 }
 
@@ -1023,17 +1125,20 @@ void cfgEEPROM(void) {
 
 // LED PROCEDURES ######################################################################################################
 void blinkLED(void) {
-    digitalWrite(PB1, !digitalRead(PB1));
-    digitalWrite(PB12, !digitalRead(PB12));
+//    digitalWrite(PB1, !digitalRead(PB1));
+//    digitalWrite(PB12, !digitalRead(PB12));
+    digitalWrite(LED_PIN, !digitalRead(LED_PIN));
 }
 
 
 void cfgLED(void) {
     // Flash LED
-    pinMode(PB1, OUTPUT);
-    digitalWrite(PB1, HIGH);
-    pinMode(PB12, OUTPUT);
-    digitalWrite(PB12, HIGH);
+//    pinMode(PB1, OUTPUT);
+//    digitalWrite(PB1, HIGH);
+//    pinMode(PB12, OUTPUT);
+//    digitalWrite(PB12, HIGH);
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, HIGH);
 }
 
 
@@ -1042,7 +1147,8 @@ void cfgLED(void) {
  */
 
 void setup() {
-//    cfgLED();
+    cfgLED();
+    cfgProbes();
 
     cfgDisplay();
     cfgEEPROM();
@@ -1053,14 +1159,36 @@ void setup() {
     cfgButtons();
     cfgPID();
     cfgServo();
-
-    initTime = millis();
+    cfgSensorWtdg();
+    feedSensorWtdg();
+//    initTime = millis();
 }
 
 
 void loop() {
+
+    flipP1();
     // Feed the dog...
     iwdg_feed();
+
+    if (!canRead) {
+
+        blinkLED();
+
+        i2c_stop_condition(I2C1);
+
+        i2c_disable(I2C1);
+        i2c_master_enable(I2C1, I2C_BUS_RESET);
+
+        i2c_start_condition(I2C1);
+        i2c_stop_condition(I2C1);
+
+        nvic_globalirq_enable();
+
+        cfgSensor();
+        canRead = true;
+    }
+
 
     // Keep initial loop time
     time = micros();
@@ -1069,8 +1197,12 @@ void loop() {
     i++;
 
     if (i % SENSOR_MOD == 0) {
-        readSensor();
+        if (canRead)
+            feedSensorWtdg();
+            readSensor();
+
         computePID();
+
 //        blinkLED();
 
     } else if (i % SERVO_MOD == 0) {
@@ -1090,12 +1222,14 @@ void loop() {
     }
 
     // Wait for loop to complete
-    waitTime = (loopTime - (micros() - time)) / 10;
+    waitTime = loopTime - (micros() - time);
 
-    for (int m = 0; m < 10, m++;) {
-        // Feed the dog...
-        iwdg_feed();
-        delayMicroseconds(waitTime);
-    }
+//    for (int m = 0; m < 10, m++;) {
+//        // Feed the dog...
+//        iwdg_feed();
+    if (waitTime > 0)
+        delay_us(waitTime);
+//
+//    }
 
 } // END LOOP

@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true" buildAllGenerated="false">
+    <generated />
+  </component>
+  <component name="CMakeSettings">
+    <configurations>
+      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
+    </configurations>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="472e4c8c-3596-4ff9-8b90-da32877cde35" name="Default" comment="" />
+    <ignored mask="rest-client.private.env.json" />
+    <ignored mask="http-client.private.env.json" />
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="TRACKING_ENABLED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="225">
+      <file leaf-file-name="MPU6050.cpp" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/MPU6050.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-692">
+              <caret line="427" selection-start-line="427" selection-end-line="427" />
+              <folding>
+                <element signature="e#0#720#0" />
+                <element signature="e#857#1547#0" />
+                <element signature="e#1549#2104#0" />
+                <element signature="e#2106#2293#0" />
+                <element signature="e#2295#2846#0" />
+                <element signature="e#2848#3040#0" />
+                <element signature="e#3042#3261#0" />
+                <element signature="e#3263#3470#0" />
+                <element signature="e#3472#3701#0" />
+                <element signature="e#3703#3894#0" />
+                <element signature="e#3896#3990#0" />
+                <element signature="e#3992#4093#0" />
+                <element signature="e#4095#4189#0" />
+                <element signature="e#4191#4292#0" />
+                <element signature="e#4294#4396#0" />
+                <element signature="e#4398#4507#0" />
+                <element signature="e#4509#4607#0" />
+                <element signature="e#4609#4714#0" />
+                <element signature="e#4716#4816#0" />
+                <element signature="e#4818#4925#0" />
+                <element signature="e#4927#5034#0" />
+                <element signature="e#5036#5158#0" />
+                <element signature="e#5160#5265#0" />
+                <element signature="e#5267#5385#0" />
+                <element signature="e#5387#5499#0" />
+                <element signature="e#5501#5628#0" />
+                <element signature="e#5630#5740#0" />
+                <element signature="e#5742#5865#0" />
+                <element signature="e#5867#5975#0" />
+                <element signature="e#5977#6100#0" />
+                <element signature="e#6102#6208#0" />
+                <element signature="e#6210#6329#0" />
+                <element signature="e#6331#6432#0" />
+                <element signature="e#6434#6542#0" />
+                <element signature="e#6544#6657#0" />
+                <element signature="e#6659#6758#0" />
+                <element signature="e#6760#7006#0" />
+                <element signature="e#7008#7209#0" />
+                <element signature="e#7211#7300#0" />
+                <element signature="e#7302#7936#0" />
+                <element signature="e#7938#8806#0" />
+                <element signature="e#8808#9045#0" />
+                <element signature="e#9047#9248#0" />
+                <element signature="e#9250#9451#0" />
+                <element signature="e#9453#10302#0" />
+                <element signature="e#10304#10862#0" />
+                <element signature="e#10864#11000#0" />
+                <element signature="e#11002#11096#0" />
+                <element signature="e#11098#11192#0" />
+                <element signature="e#11194#11288#0" />
+                <element signature="e#11290#11393#0" />
+                <element signature="e#11395#11498#0" />
+                <element signature="e#11500#11603#0" />
+                <element signature="e#11605#11701#0" />
+                <element signature="e#11703#11799#0" />
+                <element signature="e#11801#11897#0" />
+                <element signature="e#11899#12004#0" />
+                <element signature="e#12006#12111#0" />
+                <element signature="e#12113#12218#0" />
+                <element signature="e#12220#13221#0" />
+                <element signature="e#13223#13321#0" />
+                <element signature="e#13323#13793#0" />
+                <element signature="e#13795#14259#0" />
+                <element signature="e#14261#14753#0" />
+                <element signature="e#14755#15029#0" />
+                <element signature="e#15031#15637#0" />
+                <element signature="e#15639#15976#0" />
+                <element signature="e#15978#16142#0" />
+                <element signature="e#16144#16426#0" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="MPU6050.h" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/MPU6050.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="18">
+              <caret line="171" column="23" selection-start-line="171" selection-start-column="9" selection-end-line="171" selection-end-column="23" />
+              <folding>
+                <element signature="e#777#797#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="JsBuildToolGruntFileManager" detection-done="true" sorting="DEFINITION_ORDER" />
+  <component name="JsBuildToolPackageJson" detection-done="true" sorting="DEFINITION_ORDER" />
+  <component name="JsGulpfileManager">
+    <detection-done>true</detection-done>
+    <sorting>DEFINITION_ORDER</sorting>
+  </component>
+  <component name="NodePackageJsonFileManager">
+    <packageJsonPaths />
+  </component>
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="26" />
+    <option name="y" value="-3" />
+    <option name="width" value="1340" />
+    <option name="height" value="771" />
+  </component>
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="Scope" />
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="Arduino-MPU6050-master" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Arduino-MPU6050-master" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Arduino-MPU6050-master" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Arduino-MPU6050-master" type="462c0819:PsiDirectoryNode" />
+              <item name="MPU6050_accel_pitch_roll" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Arduino-MPU6050-master" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Arduino-MPU6050-master" type="462c0819:PsiDirectoryNode" />
+              <item name="MPU6050_temperature" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="http.client.ignore.private.env.files.were.configured" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
+    <property name="settings.editor.selected.configurable" value="preferences.editor" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="472e4c8c-3596-4ff9-8b90-da32877cde35" name="Default" comment="" />
+      <created>1519740659067</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1519740659067</updated>
+      <workItem from="1519740660600" duration="15000" />
+      <workItem from="1527510078097" duration="2694000" />
+      <workItem from="1528556803699" duration="652000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TimeTrackingManager">
+    <option name="totallyTimeSpent" value="3361000" />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="0" y="30" width="1920" height="1050" extended-state="6" />
+    <editor active="true" />
+    <layout>
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.24934246" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" />
+      <window_info anchor="bottom" id="Version Control" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Terminal" order="7" />
+      <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Serial Monitor" order="7" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Find" order="1" />
+    </layout>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/MPU6050.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="7956">
+          <caret line="442" column="4" lean-forward="true" selection-start-line="442" selection-start-column="4" selection-end-line="442" selection-end-column="4" />
+          <folding>
+            <element signature="e#0#720#0" />
+            <element signature="e#857#1547#0" />
+            <element signature="e#1549#2104#0" />
+            <element signature="e#2106#2293#0" />
+            <element signature="e#2295#2846#0" />
+            <element signature="e#2848#3040#0" />
+            <element signature="e#3042#3261#0" />
+            <element signature="e#3263#3470#0" />
+            <element signature="e#3472#3701#0" />
+            <element signature="e#3703#3894#0" />
+            <element signature="e#3896#3990#0" />
+            <element signature="e#3992#4093#0" />
+            <element signature="e#4095#4189#0" />
+            <element signature="e#4191#4292#0" />
+            <element signature="e#4294#4396#0" />
+            <element signature="e#4398#4507#0" />
+            <element signature="e#4509#4607#0" />
+            <element signature="e#4609#4714#0" />
+            <element signature="e#4716#4816#0" />
+            <element signature="e#4818#4925#0" />
+            <element signature="e#4927#5034#0" />
+            <element signature="e#5036#5158#0" />
+            <element signature="e#5160#5265#0" />
+            <element signature="e#5267#5385#0" />
+            <element signature="e#5387#5499#0" />
+            <element signature="e#5501#5628#0" />
+            <element signature="e#5630#5740#0" />
+            <element signature="e#5742#5865#0" />
+            <element signature="e#5867#5975#0" />
+            <element signature="e#5977#6100#0" />
+            <element signature="e#6102#6208#0" />
+            <element signature="e#6210#6329#0" />
+            <element signature="e#6331#6432#0" />
+            <element signature="e#6434#6542#0" />
+            <element signature="e#6544#6657#0" />
+            <element signature="e#6659#6758#0" />
+            <element signature="e#6760#7006#0" />
+            <element signature="e#7008#7209#0" />
+            <element signature="e#7211#7300#0" />
+            <element signature="e#7302#7936#0" />
+            <element signature="e#7938#8806#0" />
+            <element signature="e#8808#9045#0" />
+            <element signature="e#9047#9248#0" />
+            <element signature="e#9250#9451#0" />
+            <element signature="e#9453#10302#0" />
+            <element signature="e#10304#10862#0" />
+            <element signature="e#10864#11000#0" />
+            <element signature="e#11002#11096#0" />
+            <element signature="e#11098#11192#0" />
+            <element signature="e#11194#11288#0" />
+            <element signature="e#11290#11393#0" />
+            <element signature="e#11395#11498#0" />
+            <element signature="e#11500#11603#0" />
+            <element signature="e#11605#11701#0" />
+            <element signature="e#11703#11799#0" />
+            <element signature="e#11801#11897#0" />
+            <element signature="e#11899#12004#0" />
+            <element signature="e#12006#12111#0" />
+            <element signature="e#12113#12218#0" />
+            <element signature="e#12220#13221#0" />
+            <element signature="e#13223#13321#0" />
+            <element signature="e#13323#13793#0" />
+            <element signature="e#13795#14259#0" />
+            <element signature="e#14261#14753#0" />
+            <element signature="e#14755#15029#0" />
+            <element signature="e#15031#15637#0" />
+            <element signature="e#15639#15976#0" />
+            <element signature="e#15978#16142#0" />
+            <element signature="e#16144#16426#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MPU6050.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3078">
+          <caret line="171" column="23" selection-start-line="171" selection-start-column="9" selection-end-line="171" selection-end-column="23" />
+          <folding>
+            <element signature="e#777#797#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/cores/maple/HardwareSerial.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4014">
+          <caret line="223" column="6" lean-forward="true" selection-start-line="223" selection-start-column="6" selection-end-line="223" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MPU6050_temperature/MPU6050_temperature.ino">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-270" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/libraries/Wire/Wire.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-486" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/libraries/Wire/Wire.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-433" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/cores/maple/stm32f1/wiring_pulse_f1.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-919" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/README.md">
+      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
+        <state split_layout="SPLIT">
+          <first_editor />
+          <second_editor />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MPU6050_accel_pitch_roll/MPU6050_accel_pitch_roll.ino">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-428" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/libraries/Wire/examples/i2c_scanner_softwire/i2c_scanner_softwire.ino">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-505" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/libraries/Wire/examples/i2c_scanner_wire/i2c_scanner_wire.ino">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-955" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/libraries/Wire/utility/WireBase.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-2175" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/libraries/WS2812B/examples/WS2812B_test/WS2812B_test.ino">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-756" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/cores/maple/wirish.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1545" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/cores/maple/WProgram.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-181" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/cores/maple/HardwareSerial.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-2251" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../hardware/STM32/STM32F1/cores/maple/HardwareSerial.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="771">
+          <caret line="223" column="6" selection-start-line="223" selection-start-column="6" selection-end-line="223" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MPU6050.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="18">
+          <caret line="171" column="23" selection-start-line="171" selection-start-column="9" selection-end-line="171" selection-end-column="23" />
+          <folding>
+            <element signature="e#777#797#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MPU6050.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-692">
+          <caret line="427" selection-start-line="427" selection-end-line="427" />
+          <folding>
+            <element signature="e#0#720#0" />
+            <element signature="e#857#1547#0" />
+            <element signature="e#1549#2104#0" />
+            <element signature="e#2106#2293#0" />
+            <element signature="e#2295#2846#0" />
+            <element signature="e#2848#3040#0" />
+            <element signature="e#3042#3261#0" />
+            <element signature="e#3263#3470#0" />
+            <element signature="e#3472#3701#0" />
+            <element signature="e#3703#3894#0" />
+            <element signature="e#3896#3990#0" />
+            <element signature="e#3992#4093#0" />
+            <element signature="e#4095#4189#0" />
+            <element signature="e#4191#4292#0" />
+            <element signature="e#4294#4396#0" />
+            <element signature="e#4398#4507#0" />
+            <element signature="e#4509#4607#0" />
+            <element signature="e#4609#4714#0" />
+            <element signature="e#4716#4816#0" />
+            <element signature="e#4818#4925#0" />
+            <element signature="e#4927#5034#0" />
+            <element signature="e#5036#5158#0" />
+            <element signature="e#5160#5265#0" />
+            <element signature="e#5267#5385#0" />
+            <element signature="e#5387#5499#0" />
+            <element signature="e#5501#5628#0" />
+            <element signature="e#5630#5740#0" />
+            <element signature="e#5742#5865#0" />
+            <element signature="e#5867#5975#0" />
+            <element signature="e#5977#6100#0" />
+            <element signature="e#6102#6208#0" />
+            <element signature="e#6210#6329#0" />
+            <element signature="e#6331#6432#0" />
+            <element signature="e#6434#6542#0" />
+            <element signature="e#6544#6657#0" />
+            <element signature="e#6659#6758#0" />
+            <element signature="e#6760#7006#0" />
+            <element signature="e#7008#7209#0" />
+            <element signature="e#7211#7300#0" />
+            <element signature="e#7302#7936#0" />
+            <element signature="e#7938#8806#0" />
+            <element signature="e#8808#9045#0" />
+            <element signature="e#9047#9248#0" />
+            <element signature="e#9250#9451#0" />
+            <element signature="e#9453#10302#0" />
+            <element signature="e#10304#10862#0" />
+            <element signature="e#10864#11000#0" />
+            <element signature="e#11002#11096#0" />
+            <element signature="e#11098#11192#0" />
+            <element signature="e#11194#11288#0" />
+            <element signature="e#11290#11393#0" />
+            <element signature="e#11395#11498#0" />
+            <element signature="e#11500#11603#0" />
+            <element signature="e#11605#11701#0" />
+            <element signature="e#11703#11799#0" />
+            <element signature="e#11801#11897#0" />
+            <element signature="e#11899#12004#0" />
+            <element signature="e#12006#12111#0" />
+            <element signature="e#12113#12218#0" />
+            <element signature="e#12220#13221#0" />
+            <element signature="e#13223#13321#0" />
+            <element signature="e#13323#13793#0" />
+            <element signature="e#13795#14259#0" />
+            <element signature="e#14261#14753#0" />
+            <element signature="e#14755#15029#0" />
+            <element signature="e#15031#15637#0" />
+            <element signature="e#15639#15976#0" />
+            <element signature="e#15978#16142#0" />
+            <element signature="e#16144#16426#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>
