@@ -89,7 +89,7 @@
 
 
 // Time ################################################################################################################
-volatile long loopTime = 2500;
+volatile long loopTime = 3000;
 volatile long i = 1;
 volatile long waitTime = 0;
 
@@ -274,7 +274,7 @@ uint16 eepromStatus;
 #define LED_PIN                 PC13
 #define PROBE_PIN               PA15
 #define PROBE2_PIN              PB13
-#define SENSOR_IWDG             20000
+#define SENSOR_IWDG             10000
 
 volatile bool canRead = true;
 volatile int intCount = 0;
@@ -317,10 +317,9 @@ void resetSensor(void) {
     intCount++;
     flipP2();
 
-//    I2C1->state = I2C_STATE_ERROR;
-
     digitalWrite(SENSOR_VCC, LOW);
-
+    digitalWrite(SDA, LOW);
+    delay_us(10);
     digitalWrite(SCL, LOW);
     delay_us(10);
     digitalWrite(SCL, HIGH);
@@ -429,10 +428,10 @@ void cfgSensor(void) {
 
     // Power cycle MPU for fresh start
     digitalWrite(SENSOR_VCC, LOW);
-    delay_us(1000);
-
+    delay_us(300);
+//
     digitalWrite(SENSOR_VCC, HIGH);
-    delay_us(2000);
+    delay_us(100);
 
     // Initialize MPU6050
     while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
@@ -444,7 +443,7 @@ void cfgSensor(void) {
         display.setCursor(12, 25);
         display.println("FALHA NO SENSOR");
         display.display();
-        delay(1);
+        delay_us(100);
     };
 
     // Configure mpu
@@ -454,7 +453,7 @@ void cfgSensor(void) {
 
     mpu.setDLPFMode(DLPF);                              // Set low pass filter band
     mpu.setTempEnabled(false);                          // disable temperature sensor
-    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);        // delay start for compatibility issues
+//    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);        // delay start for compatibility issues
 
     mpu.writeRegister8(0x23, 0b00000000);               // Disable FIFO queues
 //    mpu.writeRegister8(0x37, 0b00010000);               // Interruption pin config
@@ -1166,16 +1165,18 @@ void setup() {
 
 
 void loop() {
-
     flipP1();
     // Feed the dog...
     iwdg_feed();
+    feedSensorWtdg();
 
     if (!canRead) {
 
+//        I2C1->state = I2C_STATE_ERROR;
+
         blinkLED();
 
-        i2c_stop_condition(I2C1);
+//        i2c_stop_condition(I2C1);
 
         i2c_disable(I2C1);
         i2c_master_enable(I2C1, I2C_BUS_RESET);
@@ -1186,6 +1187,9 @@ void loop() {
         nvic_globalirq_enable();
 
         cfgSensor();
+
+        I2C1->state = I2C_STATE_IDLE;
+
         canRead = true;
     }
 
