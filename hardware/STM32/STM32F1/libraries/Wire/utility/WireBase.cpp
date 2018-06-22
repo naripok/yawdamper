@@ -91,7 +91,7 @@ uint8 WireBase::requestFrom(uint8 address, int num_bytes) {
     if ((res == ENACKADDR) || (res == ENACKTRNS)) {
 //        digitalWrite(PC13, !digitalRead(PC13));
         itc_msg.flags = 0;
-        return -1;
+        return 0;
     }
 
     rx_buf_len += itc_msg.xferred;

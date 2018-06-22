@@ -124,8 +124,7 @@ void i2c_bus_reset(const i2c_dev *dev) {
     while (!gpio_read_bit(sda_port(dev), dev->sda_pin)) {
         /* Wait for any clock stretching to finish */
         while (!gpio_read_bit(scl_port(dev), dev->scl_pin)) {
-            if (dev->state & I2C_STATE_ERROR) {
-                nvic_globalirq_enable();
+            if (dev->state == I2C_STATE_ERROR) {
                 break;
             }
         }
@@ -139,6 +138,11 @@ void i2c_bus_reset(const i2c_dev *dev) {
         /* Release high again */
         gpio_write_bit(scl_port(dev), dev->scl_pin, 1);
         delay_us(10);
+
+        if (dev->state == I2C_STATE_ERROR) {
+            break;
+        }
+
     }
 
     /* Generate start then stop condition */
@@ -151,6 +155,7 @@ void i2c_bus_reset(const i2c_dev *dev) {
     gpio_write_bit(sda_port(dev), dev->sda_pin, 1);
 
     nvic_globalirq_enable();
+
 }
 
 /**
@@ -186,8 +191,8 @@ void i2c_init(i2c_dev *dev) {
 void i2c_master_enable(i2c_dev *dev, uint32 flags) {
     /* PE must be disabled to configure the device */
 //    ASSERT(!(dev->regs->CR1 & I2C_CR1_PE));
-    if (!(dev->regs->CR1 & I2C_CR1_PE))
-        dev->regs->CR1 = dev->regs->CR1 & !I2C_CR1_PE;
+    if (!(dev->regs->CR1 & I2C_CR1_PE))  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        dev->regs->CR1 = dev->regs->CR1 & I2C_CR1_PE;
 //        dev->state = I2C_STATE_ERROR;
 
 
@@ -216,7 +221,7 @@ void i2c_master_enable(i2c_dev *dev, uint32 flags) {
 
     dev->state = I2C_STATE_IDLE;
 
-    nvic_globalirq_enable();
+//    nvic_globalirq_enable();
 }
 
 /**
@@ -242,10 +247,10 @@ int32 i2c_master_xfer(i2c_dev *dev,
     int32 rc;
 
 //    ASSERT(dev->state == I2C_STATE_IDLE);
-    if(!(dev->state == I2C_STATE_IDLE)) {
-        dev->state = I2C_STATE_ERROR;
-        nvic_globalirq_enable();
-        return I2C_ERROR_PROTOCOL;
+    if(dev->state != I2C_STATE_IDLE) {
+        nvic_globalirq_enable();  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        dev->state = I2C_STATE_ERROR;  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        goto out;
     }
 
     dev->msg = msgs;
@@ -258,12 +263,14 @@ int32 i2c_master_xfer(i2c_dev *dev,
     
     rc = wait_for_state_change(dev, I2C_STATE_XFER_DONE, timeout);
     if (rc < 0) {
+        dev->state = I2C_STATE_ERROR;  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        nvic_globalirq_enable();  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         goto out;
     }
 
     dev->state = I2C_STATE_IDLE;
 out:
-    nvic_globalirq_enable();
+
     return rc;
 }
 
@@ -279,10 +286,11 @@ static inline int32 wait_for_state_change(i2c_dev *dev,
                                           uint32 timeout) {
     i2c_state tmp;
 
-    while ((dev->state & I2C_STATE_ERROR)) {
+    while ((dev->state != I2C_STATE_ERROR)) {  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         tmp = dev->state;
 
         if (tmp == I2C_STATE_ERROR) {
+            nvic_globalirq_enable();  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             return I2C_ERROR_PROTOCOL;
         }
 
@@ -294,11 +302,13 @@ static inline int32 wait_for_state_change(i2c_dev *dev,
             if (systick_uptime() > (dev->timestamp + timeout)) {
                 /* TODO: overflow? */
                 /* TODO: racy? */
-
+                nvic_globalirq_enable();  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 return I2C_ERROR_TIMEOUT;
             }
         }
     }
+
+//    return I2C_ERROR_PROTOCOL;  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 }
 
 /*
@@ -409,7 +419,8 @@ void _i2c_irq_handler(i2c_dev *dev) {
              * This should be impossible...
              */
 //            ASSERT(0);
-            dev->state = I2C_STATE_ERROR;
+            nvic_globalirq_enable();
+            dev->state = I2C_STATE_ERROR;  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         }
         sr1 = sr2 = 0;
     }
@@ -429,7 +440,7 @@ void _i2c_irq_handler(i2c_dev *dev) {
              */
             i2c_start_condition(dev);
             while (!(dev->regs->SR1 & I2C_SR1_SB)) {
-                if (dev->state & (I2C_ERROR_TIMEOUT | I2C_ERROR_PROTOCOL)) {
+                if (dev->state == I2C_STATE_ERROR) {  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                     nvic_globalirq_enable();
                     break;
                 }
@@ -507,7 +518,7 @@ void _i2c_irq_error_handler(i2c_dev *dev) {
     i2c_disable_irq(dev, I2C_IRQ_BUFFER | I2C_IRQ_EVENT | I2C_IRQ_ERROR);
     dev->state = I2C_STATE_ERROR;
 
-    nvic_globalirq_enable();
+//    nvic_globalirq_enable();
 }
 
 /*

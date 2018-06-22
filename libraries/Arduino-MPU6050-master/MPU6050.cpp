@@ -370,13 +370,13 @@ SignedVector MPU6050::readRawAccel(void)
 
     if (res < 0) {
         digitalWrite(PC13, !digitalRead(PC13));
-//        Wire.endTransmission();
+        Wire.endTransmission();
         nvic_globalirq_enable();
     }
 
     while (Wire.available() < 6) {
         if (I2C1->state == I2C_STATE_ERROR) {
-//            Wire.endTransmission();
+            Wire.endTransmission();
             nvic_globalirq_enable();
             break;
         }
@@ -401,7 +401,7 @@ SignedVector MPU6050::readRawAccel(void)
     ra.XAxis = (xha << 8 | xla);
     ra.YAxis = (yha << 8 | yla);
     ra.ZAxis = (zha << 8 | zla);
-	
+
     return ra;
 }
 
@@ -455,13 +455,13 @@ SignedVector MPU6050::readRawGyro(void)
 
     if (res < 0) {
         digitalWrite(PC13, !digitalRead(PC13));
-//        Wire.endTransmission();
+        Wire.endTransmission();
         nvic_globalirq_enable();
     }
 
     while (Wire.available() < 6) {
         if (I2C1->state == I2C_STATE_ERROR) {
-//            Wire.endTransmission();
+            Wire.endTransmission();
             nvic_globalirq_enable();
             break;
         }

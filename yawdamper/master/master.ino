@@ -160,7 +160,7 @@ volatile bool pidOn = false;                         // true if in automatic mod
 
 
 // PID instance
-PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/10, pidMode);
+PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/5, pidMode);
 
 
 // DISPLAY #############################################################################################################
@@ -349,13 +349,13 @@ void readSensor(void) {
     normG = mpu.readNormalizeGyro();
 
     // Apply exponential filtering to chosen axis
-    roll = (roll * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (normA.XAxis - offsetRoll));
-    pitch = (pitch * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (normA.YAxis - offsetPitch));
-    yaw = (yaw * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (normA.ZAxis - offsetYaw));
+    roll = (roll * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normA.XAxis - offsetRoll));
+    pitch = (pitch * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normA.YAxis - offsetPitch));
+    yaw = (yaw * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normA.ZAxis - offsetYaw));
 
-    gyroX = (gyroX * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (normG.XAxis / 5 - offsetGx));
-    gyroY = (gyroY * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (normG.YAxis / 5 - offsetGy));
-    gyroZ = (gyroZ * (1 - (alpha / 10)) + sensorReverse * (alpha / 10) * (normG.ZAxis / 5 - offsetGz));
+    gyroX = (gyroX * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.XAxis / 5 - offsetGx));
+    gyroY = (gyroY * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.YAxis / 5 - offsetGy));
+    gyroZ = (gyroZ * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.ZAxis / 5 - offsetGz));
 }
 
 
@@ -428,10 +428,10 @@ void cfgSensor(void) {
 
     // Power cycle MPU for fresh start
     digitalWrite(SENSOR_VCC, LOW);
-    delay_us(300);
+    delay(3);
 //
     digitalWrite(SENSOR_VCC, HIGH);
-    delay_us(100);
+    delay(1);
 
     // Initialize MPU6050
     while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
@@ -443,7 +443,7 @@ void cfgSensor(void) {
         display.setCursor(12, 25);
         display.println("FALHA NO SENSOR");
         display.display();
-        delay_us(100);
+        delay(1);
     };
 
     // Configure mpu
@@ -453,7 +453,7 @@ void cfgSensor(void) {
 
     mpu.setDLPFMode(DLPF);                              // Set low pass filter band
     mpu.setTempEnabled(false);                          // disable temperature sensor
-//    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);        // delay start for compatibility issues
+    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);        // delay start for compatibility issues
 
     mpu.writeRegister8(0x23, 0b00000000);               // Disable FIFO queues
 //    mpu.writeRegister8(0x37, 0b00010000);               // Interruption pin config
@@ -634,13 +634,13 @@ void printControl(void) {
 
 
     // Ball
-    display.fillCircle(constrain(int(56.2 + *usedAxis * (258 / (2 * G))) + xOffset, 14 + xOffset, 98 + xOffset), 22 + yOffset, 5, WHITE);
+    display.fillCircle(constrain(int(56.5 + *usedAxis * (258 / (2 * G))) + xOffset, 14 + xOffset, 98 + xOffset), 22 + yOffset, 5, WHITE);
 
     // Gyro
-    display.fillRect(constrain(int(55.2 + *usedGAxis * (96 / (2 * G))) + xOffset, 9 + xOffset, 101 + xOffset), 37 + yOffset, 3, 6, WHITE);
+    display.fillRect(constrain(int(55.5 + *usedGAxis * (96 / (2 * G))) + xOffset, 9 + xOffset, 101 + xOffset), 37 + yOffset, 3, 6, WHITE);
 
     // Yaw position
-    display.fillRect(constrain(int(55.2 - filteredOutput * (96 / (2 * G))) + xOffset, 9 + xOffset, 101 + xOffset), 44 + yOffset, 3, 6, WHITE);
+    display.fillRect(constrain(int(55.5 - filteredOutput * (96 / (2 * G))) + xOffset, 9 + xOffset, 101 + xOffset), 44 + yOffset, 3, 6, WHITE);
 
     // Markers
     if (pidOn) {
@@ -823,16 +823,16 @@ void readPlusB(void) {
             pressTime = millis();
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + 0.01, 0, 1);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 1) {
-                KP = constrain(KP + 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KP = constrain(KP + 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 2) {
-                KI = constrain(KI + 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KI = constrain(KI + 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 3) {
-                KD = constrain(KD + 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KD = constrain(KD + 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 4) {
                 pidMode = constrain(pidMode + 1, 0, 1);
                 pid.SetControllerDirection(pidMode);
@@ -853,16 +853,16 @@ void readPlusB(void) {
         } else if ((millis() - pressTime) > 500){
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + 0.01, 0, 1);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 1) {
-                KP = constrain(KP + 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KP = constrain(KP + 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 2) {
-                KI = constrain(KI + 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KI = constrain(KI + 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 3) {
-                KD = constrain(KD + 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KD = constrain(KD + 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 5) {
                 alpha = constrain(alpha + 0.01, 0, 1);
             } else if (pidCalib == 8) {
@@ -899,16 +899,16 @@ void readMinusB(void) {
             pressTime = millis();
             if (pidOn && !pidCalib) {
                 gain = constrain(gain - 0.01, 0, 1);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 1) {
-                KP = constrain(KP - 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KP = constrain(KP - 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 2) {
-                KI = constrain(KI - 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KI = constrain(KI - 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 3) {
-                KD = constrain(KD - 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KD = constrain(KD - 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 4) {
                 pidMode = constrain(pidMode - 1, 0, 1);
                 pid.SetControllerDirection(pidMode);
@@ -929,16 +929,16 @@ void readMinusB(void) {
         } else if ((millis() - pressTime) > 500){
             if (pidOn && !pidCalib) {
                 gain = constrain(gain - 0.01, 0, 1);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 1) {
-                KP = constrain(KP - 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KP = constrain(KP - 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 2) {
-                KI = constrain(KI - 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KI = constrain(KI - 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 3) {
-                KD = constrain(KD - 0.01, 0, 5);
-                pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                KD = constrain(KD - 0.01, 0, 9);
+                pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
             } else if (pidCalib == 5) {
                 alpha = constrain(alpha - 0.01, 0, 1);
             } else if (pidCalib == 8) {
@@ -995,7 +995,7 @@ void readOnOff(void) {
                 } else {
 //                    trimValue = output;
                     filteredOutput = output = trimValue;
-                    pid.SetTunings(gain*KP, gain*KI, gain*KD/10);
+                    pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
                     pid.SetMode(AUTOMATIC);
                     pidOn = true;
                 }
@@ -1146,13 +1146,13 @@ void cfgLED(void) {
  */
 
 void setup() {
-    cfgLED();
-    cfgProbes();
+//    cfgLED();
+//    cfgProbes();
 
     cfgDisplay();
     cfgEEPROM();
 
-    iwdg_init(IWDG_PRE_256, IWDG_NUM); // enable watchdog
+//    iwdg_init(IWDG_PRE_256, IWDG_NUM); // enable watchdog
 
     cfgSensor();
     cfgButtons();

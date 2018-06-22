@@ -41,7 +41,7 @@
 uint8 TwoWire::process(uint8 stop) {
     int8 res = i2c_master_xfer(sel_hard, &itc_msg, 1, 1); // Process an i2c transaction
 
-    if ((res == I2C_ERROR_PROTOCOL) || (res == I2C_ERROR_TIMEOUT)) {
+    if ((res == I2C_ERROR_PROTOCOL) || (res == I2C_ERROR_TIMEOUT) || (sel_hard->state == I2C_STATE_ERROR)) {
 
         nvic_globalirq_enable();
 
