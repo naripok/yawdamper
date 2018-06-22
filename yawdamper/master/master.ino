@@ -297,7 +297,7 @@ void flipP2(void) {
 
 // TIMER PROCEDURES ####################################################################################################
 
-#define T                   Timer3
+#define T                   Timer4
 #define c                   1
 
 void cfgSensorWtdg(void) {
@@ -315,7 +315,7 @@ void cfgSensorWtdg(void) {
 void resetSensor(void) {
 
     intCount++;
-    flipP2();
+//    flipP2();
 
     digitalWrite(SENSOR_VCC, LOW);
     digitalWrite(SDA, LOW);
@@ -629,8 +629,8 @@ void printControl(void) {
     display.println("TON");
     display.setCursor(48 + xOffset, 4 + yOffset);
 //    display.println((millis() - initTime) / 60000);
-//    display.println(systick_uptime() / 1000);
-    display.println(intCount);
+    display.println(systick_uptime() / 60000);
+//    display.println(intCount);
 
 
     // Ball
@@ -1165,7 +1165,7 @@ void setup() {
 
 
 void loop() {
-    flipP1();
+//    flipP1();
     // Feed the dog...
     iwdg_feed();
     feedSensorWtdg();
@@ -1188,7 +1188,7 @@ void loop() {
 
         cfgSensor();
 
-        I2C1->state = I2C_STATE_IDLE;
+//        I2C1->state = I2C_STATE_IDLE;
 
         canRead = true;
     }
@@ -1219,21 +1219,12 @@ void loop() {
         processInterface();
         i = 1;
 
-//    } else {
-//        delayMicroseconds(1000);
-//        delay(1);
-
     }
 
     // Wait for loop to complete
     waitTime = loopTime - (micros() - time);
 
-//    for (int m = 0; m < 10, m++;) {
-//        // Feed the dog...
-//        iwdg_feed();
     if (waitTime > 0)
         delay_us(waitTime);
-//
-//    }
 
 } // END LOOP
