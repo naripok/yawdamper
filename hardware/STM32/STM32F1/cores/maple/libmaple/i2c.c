@@ -269,7 +269,8 @@ int32 i2c_master_xfer(i2c_dev *dev,
     }
 
     dev->state = I2C_STATE_IDLE;
-out:
+
+    out:
 
     return rc;
 }

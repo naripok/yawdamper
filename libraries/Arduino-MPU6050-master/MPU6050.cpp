@@ -372,6 +372,7 @@ SignedVector MPU6050::readRawAccel(void)
         digitalWrite(PC13, !digitalRead(PC13));
         Wire.endTransmission();
         nvic_globalirq_enable();
+//        I2C1->state = I2C_STATE_ERROR;
     }
 
     while (Wire.available() < 6) {
@@ -457,6 +458,7 @@ SignedVector MPU6050::readRawGyro(void)
         digitalWrite(PC13, !digitalRead(PC13));
         Wire.endTransmission();
         nvic_globalirq_enable();
+//        I2C1->state = I2C_STATE_ERROR;
     }
 
     while (Wire.available() < 6) {

@@ -88,10 +88,17 @@ uint8 WireBase::requestFrom(uint8 address, int num_bytes) {
     itc_msg.length = num_bytes;
     itc_msg.data = &rx_buf[rx_buf_idx];
     res = process();
-    if ((res == ENACKADDR) || (res == ENACKTRNS)) {
-//        digitalWrite(PC13, !digitalRead(PC13));
+
+    // ERROR CONDITIONS
+//    if ((res == ENACKADDR) || (res == ENACKTRNS)) {
+////        digitalWrite(PC13, !digitalRead(PC13));
+//        itc_msg.flags = 0;
+//        return 0;
+//    }
+
+    if (res < 0) {
         itc_msg.flags = 0;
-        return 0;
+        return -1;
     }
 
     rx_buf_len += itc_msg.xferred;

@@ -1,15 +1,47 @@
+/******************************************************************************
+ * The MIT License
+ *
+ * Copyright (c) 2010 Perry Hung.
+ * Copyright (c) 2012 LeafLabs, LLC.
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *****************************************************************************/
+
 /**
+ * @file yawdamper/yawdamper.ino
+ * @author Fernando Canteruccio <tau@megali.com>
+ * @brief Yawdamper device module.
+ *
+ */
+
+ /**
  * Tau, 15/06/2018
  * Yawdamper master module
  *
  * TODO:
- *     EEPROM
- *     Sensor read <-
- *     PID
- *     Servo
- *     Watchdog
-  * This project uses a stm32f103c6, mpu5060, ssd1306 as a yawdamper module for
- * light aircraft applications
+ *
+ * DESCRIPTION:
+ *
+ * This project uses a stm32f103c8, mpu6050 and ssd1306 as a yawdamper module for
+ * light experimental aircraft applications.
  *
  * ## PINMAP ###########################################################################################################
  *
@@ -68,12 +100,14 @@
 #include <Wire.h>
 #include <libmaple/iwdg.h>
 #include <HardwareTimer.h>
+
 #include <libmaple/i2c.h>
 #include <libmaple/systick.h>
-#include <libmaple/nvic.h>
-//#include <series/nvic.h>
-#include "stm32f1/include/series/nvic.h"
-#include <libmaple/libmaple.h>
+
+// #include <libmaple/nvic.h>
+// #include <series/nvic.h>
+// #include "stm32f1/include/series/nvic.h"
+//#include <libmaple/libmaple.h>
 #include <libmaple/rcc.h>
 #include <libmaple/util.h>
 #include <libmaple/scb.h>
@@ -94,7 +128,7 @@ volatile long i = 1;
 volatile long waitTime = 0;
 
 // Watchdog ############################################################################################################
-#define IWDG_NUM                300
+#define IWDG_NUM                200
 #define IWDG_PRESCALER          IWDG_PRE_256
 
 
@@ -233,6 +267,7 @@ volatile unsigned long debounceDelay = 300;
 
 // EEPROM ##############################################################################################################
 // EEPROM macros
+#define LASTSTATE_ADDRESS       0x1D
 #define GAING_ADDRESS           0x1C
 #define AXIS_ADDRESS            0x1B
 #define SENSOR_REVERSE_ADDRESS  0x1A
@@ -317,19 +352,20 @@ void resetSensor(void) {
     intCount++;
 //    flipP2();
 
-    digitalWrite(SENSOR_VCC, LOW);
-    digitalWrite(SDA, LOW);
-    delay_us(10);
-    digitalWrite(SCL, LOW);
-    delay_us(10);
-    digitalWrite(SCL, HIGH);
+//    digitalWrite(SENSOR_VCC, LOW);
+//    digitalWrite(SDA, LOW);
+//    delay_us(10);
+//    digitalWrite(SCL, LOW);
+//    delay_us(10);
+//    digitalWrite(SCL, HIGH);
 
-    digitalWrite(SENSOR_VCC, HIGH);
+//    digitalWrite(SENSOR_VCC, HIGH);
 
     nvic_globalirq_enable();
 
     canRead = false;
 
+    writeEEPROM(LASTSTATE_ADDRESS, pidOn);
 }
 
 
@@ -428,7 +464,7 @@ void cfgSensor(void) {
 
     // Power cycle MPU for fresh start
     digitalWrite(SENSOR_VCC, LOW);
-    delay(3);
+    delay(100);
 //
     digitalWrite(SENSOR_VCC, HIGH);
     delay(1);
@@ -520,6 +556,10 @@ void cfgPID(void) {
     KD = readEEPROM(KD_ADDRESS);
     pidMode = readEEPROM(PID_MODE_ADDRESS);
     gainG = readEEPROM(GAING_ADDRESS);
+    pidOn = readEEPROM(LASTSTATE_ADDRESS);
+
+    if (pidOn)
+        writeEEPROM(LASTSTATE_ADDRESS, 0);
 
     filteredOutput = trimValue;
 }
@@ -1152,7 +1192,7 @@ void setup() {
     cfgDisplay();
     cfgEEPROM();
 
-//    iwdg_init(IWDG_PRE_256, IWDG_NUM); // enable watchdog
+    iwdg_init(IWDG_PRE_256, IWDG_NUM); // enable watchdog
 
     cfgSensor();
     cfgButtons();
@@ -1170,6 +1210,7 @@ void loop() {
     iwdg_feed();
     feedSensorWtdg();
 
+
     if (!canRead) {
 
 //        I2C1->state = I2C_STATE_ERROR;
@@ -1177,13 +1218,26 @@ void loop() {
         blinkLED();
 
 //        i2c_stop_condition(I2C1);
-
+//
+//        i2c_disable(I2C1);
+//        i2c_master_enable(I2C1, I2C_BUS_RESET);
+//
+//        i2c_start_condition(I2C1);
+//        i2c_stop_condition(I2C1);
+//
+//        nvic_globalirq_enable();
+//
+//        cfgSensor();
+//
+////        I2C1->state = I2C_STATE_IDLE;
+//
+//        canRead = true;
         i2c_disable(I2C1);
         i2c_master_enable(I2C1, I2C_BUS_RESET);
-
-        i2c_start_condition(I2C1);
-        i2c_stop_condition(I2C1);
-
+//
+//        i2c_start_condition(I2C1);
+//        i2c_stop_condition(I2C1);
+//
         nvic_globalirq_enable();
 
         cfgSensor();
