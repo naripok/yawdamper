@@ -21,20 +21,21 @@ All text above, and the splash screen must be included in any redistribution
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-// If using software SPI (the default case):
-#define OLED_MOSI   9
-#define OLED_CLK   10
-#define OLED_DC    11
-#define OLED_CS    12
-#define OLED_RESET 13
-Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
+//// If using software SPI (the default case):
+//#define OLED_MOSI  MOSI
+//#define OLED_CLK   SCK
+//#define OLED_DC    SS
+//#define OLED_CS    MISO
+//#define OLED_RESET 8
+//Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
-/* Uncomment this block to use hardware SPI
-#define OLED_DC     6
-#define OLED_CS     7
-#define OLED_RESET  8
+//// Uncomment this block to use hardware SPI
+#define OLED_DC     PB0 //PB10 // was 9 for Nano
+#define OLED_CS     PA3 //PB0  // was 10 for Nano
+#define OLED_RESET  PA4 //PB2  // was 13 for Nano
+
 Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
-*/
+
 
 #define NUMFLAKES 10
 #define XPOS 0
@@ -66,7 +67,7 @@ static const unsigned char PROGMEM logo16_glcd_bmp[] =
 #endif
 
 void setup()   {                
-  Serial.begin(9600);
+//  Serial.begin(9600);
 
   // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
   display.begin(SSD1306_SWITCHCAPVCC);

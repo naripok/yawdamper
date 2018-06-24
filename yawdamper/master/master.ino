@@ -104,10 +104,6 @@
 #include <libmaple/i2c.h>
 #include <libmaple/systick.h>
 
-// #include <libmaple/nvic.h>
-// #include <series/nvic.h>
-// #include "stm32f1/include/series/nvic.h"
-//#include <libmaple/libmaple.h>
 #include <libmaple/rcc.h>
 #include <libmaple/util.h>
 #include <libmaple/scb.h>
@@ -136,14 +132,18 @@ volatile long waitTime = 0;
 // Sensor macros
 // #define SENSOR_SCL           PB6                  // m16
 // #define SENSOR_SDA           PB7                  // m15
-#define SENSOR_VCC              PB4                  // m26
-#define INT_PIN                 PB12//PA8                  // m27
-#define SDA                     PB7//PA7                  // m4
-#define SCL                     PB6//PA5                  // m6
+#define SENSOR_VCC              PB4  // 18
+//#define INT_PIN
+#define SDA                     PB7  // 15
+#define SCL                     PB6  // 16
 #define DLPF                    MPU6050_DLPF_6       // 5hz - 19ms delay
 
+#define SENSOR_IWDG             10000
+#define T                       Timer4
+#define c                       1
+
+
 // Sensor vars
-//const int SENSOR_MOD = 5;
 const int SENSOR_MOD = 2;
 const int CALIBRATION_SAMPLES = 5000;                // calibration mean n of samples
 const float G = 9.80665;                             // gravity as written in the sensor header
@@ -200,12 +200,13 @@ PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/5, pidMode);
 
 // DISPLAY #############################################################################################################
 // Display macros
-#define OLED_DC                 PA3//PB0                  // m3
-#define OLED_CS                 PA2//PB2                  // m2
-#define OLED_RESET              PA4                       // m7
+//#define OLED_SCK                PA5
+//#define OLED_MOSI               PA7
+#define OLED_DC                 PA3  // 7
+#define OLED_CS                 PA4  // 5
+#define OLED_RESET              PB5  // 8
 
 // Display vars
-//const int DISPLAY_MOD = 23;
 const int DISPLAY_MOD = 5;
 volatile long time = micros();
 volatile long initTime = time / 1000;
@@ -227,10 +228,9 @@ Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
 // SERVO ###############################################################################################################
 // Servo macros
-#define SERVO_PIN               PA10//PA1                  // m27
+#define SERVO_PIN               PA8  // 27
 
 // Servo vars
-//const int SERVO_MOD = 11;
 const int SERVO_MOD = 3;
 const int SERVO_MIN_DEG = 0;
 const int SERVO_MAX_DEG = 180;
@@ -243,12 +243,11 @@ Servo servo;
 
 // BUTTONS #############################################################################################################
 // Buttons macros
-#define ON_OFF_PIN              PB1//PB3                  // m19
-#define PLUS_PIN                PB10                 // m1
-#define MINUS_PIN               PB11                 // m0
+#define ON_OFF_PIN              PB12  // 31
+#define PLUS_PIN                PB13  // 30
+#define MINUS_PIN               PB14  // 29
 
 // Buttons vars
-//const int B_MOD = 49;
 const int B_MOD = 7;
 volatile bool onOff;
 volatile bool pidOnOff;
@@ -308,10 +307,9 @@ uint16 eepromStatus;
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
 
-#define LED_PIN                 PC13
-#define PROBE_PIN               PA15
-#define PROBE2_PIN              PB13
-#define SENSOR_IWDG             10000
+#define LED_PIN                 PB1
+#define PROBE_PIN               17
+
 
 volatile long failCount = 0;
 
@@ -319,23 +317,16 @@ volatile long failCount = 0;
 void cfgProbes(void) {
     pinMode(PROBE_PIN, OUTPUT);
     digitalWrite(PROBE_PIN, HIGH);
-    pinMode(PROBE2_PIN, OUTPUT);
-    digitalWrite(PROBE2_PIN, HIGH);
+
 }
+
 
 void flipP1(void) {
     digitalWrite(PROBE_PIN, !digitalRead(PROBE_PIN));
 }
 
-void flipP2(void) {
-    digitalWrite(PROBE2_PIN, !digitalRead(PROBE2_PIN));
-}
 
 // TIMER PROCEDURES ####################################################################################################
-
-#define T                   Timer4
-#define c                   1
-
 void cfgSensorWtdg(void) {
     T.setPeriod(SENSOR_IWDG);
     T.attachInterrupt(c, resetSensor);
@@ -451,7 +442,7 @@ void cfgSensor(void) {
 
     // Config interruption pin
     // Set INT controller port to input and attach interruption to it
-    pinMode(INT_PIN, INPUT_PULLUP);
+//    pinMode(INT_PIN, INPUT_PULLUP);
 //    attachInterrupt(digitalPinToInterrupt(INT_PIN), dataReady, FALLING);
 
     // Power cycle MPU for fresh start
@@ -1189,7 +1180,7 @@ void setup() {
     cfgSensorWtdg();
 
     failCount = readEEPROM(FAIL_ADDRESS);
-//    writeEEPROM(FAIL_ADDRESS, 0);
+
 }
 
 
