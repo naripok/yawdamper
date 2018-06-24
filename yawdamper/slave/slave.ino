@@ -15,7 +15,7 @@
 #include <Adafruit_SSD1306.h>
 
 
-#define DEBUG
+//#define DEBUG
 
 // DISPLAY #############################################################################################################
 // Display macros
@@ -37,34 +37,28 @@ Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
 // SPI vars
 char *str;
-const int bufferSize = 256;
+const int bufferSize = 64;
+static char buf[bufferSize];
+char c;
+long time;
+
 
 // SPI instance
 SPIClass SPI_2(2); //Create an instance of the SPI Class called SPI_2 that uses the 2nd SPI Port
 
 
 // Display procedures ##################################################################################################
-void drawInfo(char *l, int i) {
-    char c;
-    int j = 0;
+void refreshDisplay(char *l, float i) {
 
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(WHITE);
     display.setCursor(2, 12);
-    display.print(cycles);
+    display.print(i);
 
-    for (l; c = *l; l++) {
-        display.setCursor(2 + j * 5, 32);
-        Serial.println(c);
-        display.print(c);
-        j++;
-    }
-}
+    display.setCursor(2, 32);
+    display.print(String(l));
 
-
-void refreshDisplay(char *l, int i) {
-    drawInfo(l, i);
     display.display();
 }
 
@@ -100,27 +94,24 @@ void cfgSPI2(void) {
 
 
 char *readSPI2(int bytesToRead) {
-    static char buf[bufferSize];
-    char c;
+
+    // clear buffer
+    for (int pos = 0; pos < sizeof(buf) - 1; pos++)
+        buf[pos] = '\0';
 
     // if you still have another byte to read:
     for (int pos = 0; pos < sizeof(buf) - 1; pos++) {
         c = SPI_2.read();
 
         if (c == '\n') {
-            buf[pos] = 0;
+            buf[pos] = '\0';
             break;
         }
-
-        Serial.print(c);
 
         buf[pos] = c;
     }
 
-#ifdef DEBUG
-    Serial.println("");
-    Serial.println(buf);
-#endif
+    buf[sizeof(buf) - 1] = '\0';
 
     // return the result:
     return buf;
@@ -137,6 +128,8 @@ void setup() {
 
 void loop() {
     // Show activity
+    time = millis();
+
 //    if (i % 100 == 0)
     blinkLED();
 
