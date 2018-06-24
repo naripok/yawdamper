@@ -169,6 +169,7 @@ volatile float *usedAxis;                            // pointer to used axis
 volatile float *usedGAxis;                            // pointer to used axis
 volatile int axis = 0;                               // axis selection helper variable
 volatile int sensorReverse = 1;
+volatile bool canRead = true;
 
 // Sensor instances
 Vector normA;                                        // Accelerometer vector
@@ -267,6 +268,7 @@ volatile unsigned long debounceDelay = 300;
 
 // EEPROM ##############################################################################################################
 // EEPROM macros
+#define FAIL_ADDRESS            0x1E
 #define LASTSTATE_ADDRESS       0x1D
 #define GAING_ADDRESS           0x1C
 #define AXIS_ADDRESS            0x1B
@@ -311,8 +313,7 @@ uint16 eepromStatus;
 #define PROBE2_PIN              PB13
 #define SENSOR_IWDG             10000
 
-volatile bool canRead = true;
-volatile int intCount = 0;
+volatile long failCount = 0;
 
 
 void cfgProbes(void) {
@@ -348,24 +349,12 @@ void cfgSensorWtdg(void) {
 
 
 void resetSensor(void) {
-
-    intCount++;
-//    flipP2();
-
-//    digitalWrite(SENSOR_VCC, LOW);
-//    digitalWrite(SDA, LOW);
-//    delay_us(10);
-//    digitalWrite(SCL, LOW);
-//    delay_us(10);
-//    digitalWrite(SCL, HIGH);
-
-//    digitalWrite(SENSOR_VCC, HIGH);
-
-    nvic_globalirq_enable();
+    failCount++;
 
     canRead = false;
 
     writeEEPROM(LASTSTATE_ADDRESS, pidOn);
+    writeEEPROM(FAIL_ADDRESS, failCount);
 }
 
 
@@ -401,6 +390,8 @@ void calibrateAccelerometer(void) {
     */
 
     iwdg_feed();
+    feedSensorWtdg();
+
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(WHITE);
@@ -421,6 +412,7 @@ void calibrateAccelerometer(void) {
     int k = 0;
     while (k <= CALIBRATION_SAMPLES) {
         iwdg_feed();
+        feedSensorWtdg();
         delay(1);
         k++;
         normC = mpu.readNormalizeAccel();
@@ -464,14 +456,18 @@ void cfgSensor(void) {
 
     // Power cycle MPU for fresh start
     digitalWrite(SENSOR_VCC, LOW);
-    delay(100);
+    for (int i = 0; i < 100; i++) {
+        feedSensorWtdg();
+        iwdg_feed();
+        delay(1);
+    }
 //
     digitalWrite(SENSOR_VCC, HIGH);
     delay(1);
 
     // Initialize MPU6050
     while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
-
+        feedSensorWtdg();
         // While not initialized, display error msg
         display.clearDisplay();
         display.setTextSize(1);
@@ -494,6 +490,8 @@ void cfgSensor(void) {
     mpu.writeRegister8(0x23, 0b00000000);               // Disable FIFO queues
 //    mpu.writeRegister8(0x37, 0b00010000);               // Interruption pin config
 //    mpu.writeRegister8(0x38, 0b00000001);               // Interruption config
+
+    feedSensorWtdg();
 
     // Read offsets from EEPROM
     offsetPitch = readEEPROM(OFFSET_PITCH_ADDRESS);
@@ -587,24 +585,6 @@ void cfgServo(void) {
 
 
 // DISPLAY PROCEDURES ##################################################################################################
-void refreshDisplay(int l, long time, double freq) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-
-    display.setCursor(2, 2);
-    display.print(l);
-
-    display.setCursor(2, 22);
-    display.print(time);
-
-    display.setCursor(2, 42);
-    display.print(freq);
-
-    display.display();
-}
-
-
 void refreshScreen(void) {
 
     if (pidCalib) {
@@ -779,6 +759,11 @@ void printPidTuning(void) {
         display.println("Gr gain:");
         display.setCursor(38, 32);
         display.println(gainG);
+    } else if (pidCalib == 9) {
+        display.setCursor(38, 12);
+        display.println("Fail:");
+        display.setCursor(50, 32);
+        display.println(failCount);
     }
 
     display.display();
@@ -960,6 +945,9 @@ void readMinusB(void) {
                 axis = constrain(axis - 1, 0, 2);
             } else if (pidCalib == 8) {
                 gainG = constrain(gainG - .01, 0, 1);
+            } else if (pidCalib == 9) {
+                failCount = 0;
+                writeEEPROM(FAIL_ADDRESS, failCount);
             } else {
                 trimValue = constrain(trimValue + 0.1, -G, G);
                 filteredOutput = trimValue;
@@ -1058,10 +1046,10 @@ void readOnOff(void) {
             prevPidOnOff = pidOnOff;
         }
 
-        if (pidCalib != 8 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+        if (pidCalib != 9 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
             pidCalib++;
 
-        } else if (pidCalib == 8 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+        } else if (pidCalib == 9 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
             pidCalib = 0;
 
             writeEEPROM(AXIS_ADDRESS, axis);
@@ -1199,54 +1187,27 @@ void setup() {
     cfgPID();
     cfgServo();
     cfgSensorWtdg();
-    feedSensorWtdg();
-//    initTime = millis();
+
+    failCount = readEEPROM(FAIL_ADDRESS);
+//    writeEEPROM(FAIL_ADDRESS, 0);
 }
 
 
 void loop() {
-//    flipP1();
+
     // Feed the dog...
     iwdg_feed();
     feedSensorWtdg();
 
-
     if (!canRead) {
-
-//        I2C1->state = I2C_STATE_ERROR;
-
-        blinkLED();
-
-//        i2c_stop_condition(I2C1);
-//
-//        i2c_disable(I2C1);
-//        i2c_master_enable(I2C1, I2C_BUS_RESET);
-//
-//        i2c_start_condition(I2C1);
-//        i2c_stop_condition(I2C1);
-//
-//        nvic_globalirq_enable();
-//
-//        cfgSensor();
-//
-////        I2C1->state = I2C_STATE_IDLE;
-//
-//        canRead = true;
         i2c_disable(I2C1);
         i2c_master_enable(I2C1, I2C_BUS_RESET);
-//
-//        i2c_start_condition(I2C1);
-//        i2c_stop_condition(I2C1);
-//
-        nvic_globalirq_enable();
 
         cfgSensor();
 
-//        I2C1->state = I2C_STATE_IDLE;
-
         canRead = true;
-    }
 
+    }
 
     // Keep initial loop time
     time = micros();
@@ -1260,8 +1221,6 @@ void loop() {
             readSensor();
 
         computePID();
-
-//        blinkLED();
 
     } else if (i % SERVO_MOD == 0) {
         driveServo();
