@@ -204,7 +204,8 @@ PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/5, pidMode);
 //#define OLED_MOSI               PA7
 #define OLED_DC                 PA3  // 7
 #define OLED_CS                 PA4  // 5
-#define OLED_RESET              PB5  // 8
+//#define OLED_RESET              PB5  // 8
+#define OLED_RESET              MISO  // 8
 
 // Display vars
 const int DISPLAY_MOD = 5;
@@ -308,7 +309,7 @@ uint16 eepromStatus;
 //#define I2C_DEBUG
 
 #define LED_PIN                 PB1
-#define PROBE_PIN               17
+#define PROBE_PIN               PB5
 
 
 volatile long failCount = 0;
@@ -452,9 +453,13 @@ void cfgSensor(void) {
         iwdg_feed();
         delay(1);
     }
-//
+
+    feedSensorWtdg();
+
     digitalWrite(SENSOR_VCC, HIGH);
-    delay(1);
+    delay(3);
+
+    feedSensorWtdg();
 
     // Initialize MPU6050
     while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
@@ -474,6 +479,8 @@ void cfgSensor(void) {
 
     mpu.writeRegister8(MPU6050_REG_GYRO_CONFIG, 0b00000000);               // Gyro self test disable
 
+    feedSensorWtdg();
+
     mpu.setDLPFMode(DLPF);                              // Set low pass filter band
     mpu.setTempEnabled(false);                          // disable temperature sensor
     mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);        // delay start for compatibility issues
@@ -488,6 +495,8 @@ void cfgSensor(void) {
     offsetPitch = readEEPROM(OFFSET_PITCH_ADDRESS);
     offsetRoll = readEEPROM(OFFSET_ROLL_ADDRESS);
     offsetYaw = readEEPROM(OFFSET_YAW_ADDRESS);
+
+    feedSensorWtdg();
 
     // Read used axis from EEPROM
     axis = readEEPROM(AXIS_ADDRESS);
@@ -547,10 +556,14 @@ void cfgPID(void) {
     gainG = readEEPROM(GAING_ADDRESS);
     pidOn = readEEPROM(LASTSTATE_ADDRESS);
 
-    if (pidOn)
+    if (pidOn) {
+        filteredOutput = output = trimValue;
+        pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
+        pid.SetMode(AUTOMATIC);
         writeEEPROM(LASTSTATE_ADDRESS, 0);
-
-    filteredOutput = trimValue;
+    } else {
+        filteredOutput = trimValue;
+    }
 }
 
 
@@ -1180,6 +1193,7 @@ void setup() {
     cfgSensorWtdg();
 
     failCount = readEEPROM(FAIL_ADDRESS);
+    feedSensorWtdg();
 
 }
 
@@ -1208,6 +1222,7 @@ void loop() {
 
     if (i % SENSOR_MOD == 0) {
         if (canRead)
+//            flipP1();
             feedSensorWtdg();
             readSensor();
 
