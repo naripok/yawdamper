@@ -32,7 +32,7 @@
  *
  */
 
- /**
+/**
  * Tau, 15/06/2018
  * Yawdamper master module
  *
@@ -45,43 +45,43 @@
  *
  * ## PINMAP ###########################################################################################################
  *
- *  OLED
+ *  OLED TODO
  *      PA4  -> RES
  *      PA5  -> SCK
  *      PA7  -> SDA
  *      PA3/mPB0  -> DC
  *      PA2/mPB2  -> CS
  *
- *  BUTTONS
+ *  BUTTONS TODO
  *      PB10 -> PLUS  -> PIN12
  *      PB11 -> MINUS -> PIN11
  *      PB1/mPB3  -> MODE  -> PIN13
  *
  *  SENSOR
- *      PB12 -> INT   -> PIN1
- *      PB7  -> SDA   -> PIN5
- *      PB6  -> SCL   -> PIN6
- *      GND  -> GND   -> PIN7
- *      3.3  -> VCC   -> PIN8
+ *      PB12 -> INT
+ *      PB7  -> SDA
+ *      PB6  -> SCL
+ *      GND  -> GND
+ *      3.3  -> VCC
  *
  *  SERVO
- *      PA0  -> PWM   -> PIN10
+ *      PA8  -> PWM
  *
  *  CONTROLLER OUTPUT CONNECTOR
- *      PIN1  -> PB12
+ *      PIN1  ->
  *      PIN2  ->
  *      PIN3  ->
  *      PIN4  ->
- *      PIN5  -> PB7
- *      PIN6  -> PB6
- *      PIN7  -> SENSOR GND
- *      PIN8  -> 3.3V
+ *      PIN5  -> SERVO GND
+ *      PIN6  ->
+ *      PIN7  ->
+ *      PIN8  ->
  *      PIN9  -> GND
- *      PIN10 -> PA9
+ *      PIN10 -> PA9 -> PWM
  *      PIN11 -> PB11
  *      PIN12 -> PB10
  *      PIN13 -> PB3
- *      PIN14 -> GND
+ *      PIN14 ->
  *      PIN15 -> 12V
  *
  *  SERVO CONNECTOR
@@ -200,11 +200,8 @@ PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/5, pidMode);
 
 // DISPLAY #############################################################################################################
 // Display macros
-//#define OLED_SCK                PA5
-//#define OLED_MOSI               PA7
 #define OLED_DC                 PA3  // 7
 #define OLED_CS                 PA4  // 5
-//#define OLED_RESET              PB5  // 8
 #define OLED_RESET              MISO  // 8
 
 // Display vars
@@ -221,7 +218,7 @@ int e4 = 0;
 int e5 = 0;
 int e6 = 0;
 volatile int pidCalib = 0;
-volatile int overflowCounter = 0;
+//volatile int overflowCounter = 0;
 
 // Display instance
 Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
@@ -317,7 +314,7 @@ volatile long failCount = 0;
 
 void cfgProbes(void) {
     pinMode(PROBE_PIN, OUTPUT);
-    digitalWrite(PROBE_PIN, HIGH);
+    digitalWrite(PROBE_PIN, LOW);
 
 }
 
@@ -332,11 +329,6 @@ void cfgSensorWtdg(void) {
     T.setPeriod(SENSOR_IWDG);
     T.attachInterrupt(c, resetSensor);
 
-//    nvic_irq_disable(NVIC_I2C1_ER);
-//    nvic_irq_disable(NVIC_HARDFAULT);
-//    nvic_irq_disable(NVIC_BUS_FAULT);
-//    nvic_irq_disable(NVIC_USAGE_FAULT);
-
 }
 
 
@@ -345,7 +337,7 @@ void resetSensor(void) {
 
     canRead = false;
 
-    writeEEPROM(LASTSTATE_ADDRESS, pidOn);
+//    writeEEPROM(LASTSTATE_ADDRESS, pidOn);
     writeEEPROM(FAIL_ADDRESS, failCount);
 }
 
@@ -441,13 +433,10 @@ void cfgSensor(void) {
     // Configure controller VCC pin as output
     pinMode(SENSOR_VCC, OUTPUT);
 
-    // Config interruption pin
-    // Set INT controller port to input and attach interruption to it
-//    pinMode(INT_PIN, INPUT_PULLUP);
-//    attachInterrupt(digitalPinToInterrupt(INT_PIN), dataReady, FALLING);
-
     // Power cycle MPU for fresh start
     digitalWrite(SENSOR_VCC, LOW);
+
+    // Turn sensor off and wait for 100ms while feeding the watchdogs
     for (int i = 0; i < 100; i++) {
         feedSensorWtdg();
         iwdg_feed();
@@ -455,11 +444,8 @@ void cfgSensor(void) {
     }
 
     feedSensorWtdg();
-
     digitalWrite(SENSOR_VCC, HIGH);
     delay(3);
-
-    feedSensorWtdg();
 
     // Initialize MPU6050
     while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
@@ -554,16 +540,16 @@ void cfgPID(void) {
     KD = readEEPROM(KD_ADDRESS);
     pidMode = readEEPROM(PID_MODE_ADDRESS);
     gainG = readEEPROM(GAING_ADDRESS);
-    pidOn = readEEPROM(LASTSTATE_ADDRESS);
+//    pidOn = readEEPROM(LASTSTATE_ADDRESS);
 
-    if (pidOn) {
-        filteredOutput = output = trimValue;
-        pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
-        pid.SetMode(AUTOMATIC);
-        writeEEPROM(LASTSTATE_ADDRESS, 0);
-    } else {
-        filteredOutput = trimValue;
-    }
+//    if (pidOn) {
+//        filteredOutput = output = trimValue;
+//        pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
+//        pid.SetMode(AUTOMATIC);
+//        writeEEPROM(LASTSTATE_ADDRESS, 0);
+//    } else {
+    filteredOutput = trimValue;
+//    }
 }
 
 
@@ -1179,7 +1165,7 @@ void cfgLED(void) {
 
 void setup() {
 //    cfgLED();
-//    cfgProbes();
+    cfgProbes();
 
     cfgDisplay();
     cfgEEPROM();
