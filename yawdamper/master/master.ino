@@ -117,6 +117,9 @@
  * #####################################################################################################################
  */
 
+//#define DEBUG
+#define DEBUG_LEVEL DEBUG_NONE
+//#define I2C_DEBUG
 
 // Time ################################################################################################################
 volatile long loopTime = 3000;
@@ -138,9 +141,9 @@ volatile long waitTime = 0;
 #define SCL                     PB6
 #define DLPF                    MPU6050_DLPF_6       // 5hz - 19ms delay
 
-#define SENSOR_IWDG             10000
+#define SENSOR_IWDG             12000
 #define T                       Timer2
-#define c                       1
+#define c                       2
 
 
 // Sensor vars
@@ -302,11 +305,8 @@ uint16 eepromStatus;
  */
 
 // FAULT HANDLING ######################################################################################################
-#define DEBUG_LEVEL DEBUG_NONE
-//#define I2C_DEBUG
-
-#define LED_PIN                 PB1
-#define PROBE_PIN               PB5
+#define LED_PIN                 PC13
+#define PROBE_PIN               PB10
 
 
 volatile long failCount = 0;
@@ -338,7 +338,6 @@ void resetSensor(void) {
     canRead = false;
 
 //    writeEEPROM(LASTSTATE_ADDRESS, pidOn);
-    writeEEPROM(FAIL_ADDRESS, failCount);
 }
 
 
@@ -1165,7 +1164,9 @@ void cfgLED(void) {
 
 void setup() {
 //    cfgLED();
+#ifdef DEBUG
     cfgProbes();
+#endif
 
     cfgDisplay();
     cfgEEPROM();
@@ -1188,9 +1189,11 @@ void loop() {
 
     // Feed the dog...
     iwdg_feed();
-    feedSensorWtdg();
+//    feedSensorWtdg();
 
     if (!canRead) {
+        writeEEPROM(FAIL_ADDRESS, failCount);
+
         i2c_disable(I2C1);
         i2c_master_enable(I2C1, I2C_BUS_RESET);
 
@@ -1207,10 +1210,13 @@ void loop() {
     i++;
 
     if (i % SENSOR_MOD == 0) {
-        if (canRead)
-//            flipP1();
+        if (canRead) {
+#ifdef DEBUG
+            flipP1();
+#endif
             feedSensorWtdg();
             readSensor();
+        }
 
         computePID();
 
