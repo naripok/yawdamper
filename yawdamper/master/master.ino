@@ -132,14 +132,14 @@ volatile long waitTime = 0;
 // Sensor macros
 // #define SENSOR_SCL           PB6                  // m16
 // #define SENSOR_SDA           PB7                  // m15
-#define SENSOR_VCC              PB4  // 18
+#define SENSOR_VCC              PB4
 //#define INT_PIN
-#define SDA                     PB7  // 15
-#define SCL                     PB6  // 16
+#define SDA                     PB7
+#define SCL                     PB6
 #define DLPF                    MPU6050_DLPF_6       // 5hz - 19ms delay
 
 #define SENSOR_IWDG             10000
-#define T                       Timer4
+#define T                       Timer2
 #define c                       1
 
 
@@ -200,8 +200,8 @@ PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/5, pidMode);
 
 // DISPLAY #############################################################################################################
 // Display macros
-#define OLED_DC                 PA3  // 7
-#define OLED_CS                 PA4  // 5
+#define OLED_DC                 PB0  // 7
+#define OLED_CS                 SS  // 5
 #define OLED_RESET              MISO  // 8
 
 // Display vars
@@ -226,7 +226,7 @@ Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
 // SERVO ###############################################################################################################
 // Servo macros
-#define SERVO_PIN               PA8  // 27
+#define SERVO_PIN               PA8
 
 // Servo vars
 const int SERVO_MOD = 3;
@@ -241,9 +241,9 @@ Servo servo;
 
 // BUTTONS #############################################################################################################
 // Buttons macros
-#define ON_OFF_PIN              PB12  // 31
-#define PLUS_PIN                PB13  // 30
-#define MINUS_PIN               PB14  // 29
+#define ON_OFF_PIN              PB13
+#define PLUS_PIN                PB14
+#define MINUS_PIN               PB15
 
 // Buttons vars
 const int B_MOD = 7;
@@ -831,7 +831,7 @@ void readPlusB(void) {
      PID is on automatic mode and decreases the output if PID
      is on manual mode.
     */
-    plusB = !digitalRead(PLUS_PIN);
+    plusB = digitalRead(PLUS_PIN);
 
     if (plusB && !minusB) {
         if (prevPlusB == false) {
@@ -907,7 +907,7 @@ void readMinusB(void) {
      PID is on automatic mode and reducing the output if PID
      is on manual mode.
     */
-    minusB = !digitalRead(MINUS_PIN);
+    minusB = digitalRead(MINUS_PIN);
 
     if (minusB && !plusB) {
         if (prevMinusB == false) {
@@ -988,9 +988,9 @@ void readOnOff(void) {
 
     //sample the state of the button - is it pressed or not?
     if (!pidCalib) {
-        onOff = !digitalRead(ON_OFF_PIN);
+        onOff = digitalRead(ON_OFF_PIN);
     } else {
-        pidOnOff = !digitalRead(ON_OFF_PIN);
+        pidOnOff = digitalRead(ON_OFF_PIN);
     }
 
     //filter out any noise by setting a time buffer
@@ -1072,9 +1072,9 @@ void cfgButtons(void) {
     /**
      * Configures the buttons and switches.
      */
-    pinMode(ON_OFF_PIN, INPUT_PULLUP);
-    pinMode(PLUS_PIN, INPUT_PULLUP);
-    pinMode(MINUS_PIN, INPUT_PULLUP);
+    pinMode(ON_OFF_PIN, INPUT_PULLDOWN);
+    pinMode(PLUS_PIN, INPUT_PULLDOWN);
+    pinMode(MINUS_PIN, INPUT_PULLDOWN);
 }
 
 
