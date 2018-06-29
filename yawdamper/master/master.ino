@@ -575,7 +575,8 @@ void cfgServo(void) {
     /* Configures the servo.
     */
 //    servo.attach(SERVO_PIN, 5000 - 2400, 5000 - 544, 0, 180);
-    servo.attach(SERVO_PIN, 1000, 2000, 0, 180);
+//    servo.attach(SERVO_PIN, 1000, 2000, 0, 180);
+    servo.attach(SERVO_PIN, 1200, 2000, 0, 180);
     servo.write(convert_output(trimValue));
 }
 
@@ -1203,6 +1204,7 @@ void setup() {
     cfgProbes();
 #endif
 
+    cfgServo();
     cfgDisplay();
     cfgEEPROM();
 
@@ -1211,7 +1213,6 @@ void setup() {
     cfgSensor();
     cfgButtons();
     cfgPID();
-    cfgServo();
     cfgSensorWtdg();
 
     failCount = readEEPROM(FAIL_ADDRESS);
