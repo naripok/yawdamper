@@ -600,18 +600,22 @@ void MPU6050::calibrateGyro(uint8_t samples)
     float sigmaZ = 0;
 
     // Read n-samples
-    for (uint8_t i = 0; i < samples; ++i)
-    {
-	readRawGyro();
-	sumX += rg.XAxis;
-	sumY += rg.YAxis;
-	sumZ += rg.ZAxis;
+    for (uint8_t i = 0; i < samples; ++i) {
 
-	sigmaX += rg.XAxis * rg.XAxis;
-	sigmaY += rg.YAxis * rg.YAxis;
-	sigmaZ += rg.ZAxis * rg.ZAxis;
+        Timer2.refresh();
+        iwdg_feed();
 
-	delay(5);
+
+        readRawGyro();
+        sumX += rg.XAxis;
+        sumY += rg.YAxis;
+        sumZ += rg.ZAxis;
+
+        sigmaX += rg.XAxis * rg.XAxis;
+        sigmaY += rg.YAxis * rg.YAxis;
+        sigmaZ += rg.ZAxis * rg.ZAxis;
+
+        delay(5);
     }
 
     // Calculate delta vectors
@@ -625,9 +629,8 @@ void MPU6050::calibrateGyro(uint8_t samples)
     th.ZAxis = sqrt((sigmaZ / 50) - (dg.ZAxis * dg.ZAxis));
 
     // If already set threshold, recalculate threshold vectors
-    if (actualThreshold > 0)
-    {
-	setThreshold(actualThreshold);
+    if (actualThreshold > 0) {
+	    setThreshold(actualThreshold);
     }
 }
 
@@ -638,7 +641,8 @@ uint8_t MPU6050::getThreshold(void)
 }
 
 // Set treshold value
-void MPU6050::setThreshold(uint8_t multiple)
+//void MPU6050::setThreshold(uint8_t multiple)
+void MPU6050::setThreshold(float multiple)
 {
     if (multiple > 0)
     {

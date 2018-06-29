@@ -167,7 +167,9 @@ volatile float gyroX = 0;
 volatile float gyroY = 0;
 volatile float gyroZ = 0;
 
-volatile float alpha = 0.1;                          // exponential filter decay
+volatile float gyroThreshold = 0.0;
+
+volatile float alpha = 1.0;                          // exponential filter decay
 volatile float *usedAxis;                            // pointer to used axis
 volatile float *usedGAxis;                            // pointer to used axis
 volatile int axis = 0;                               // axis selection helper variable
@@ -190,6 +192,7 @@ double filteredOutput = 0.0;
 double setpoint = 0.0;
 double gain = 0.0;
 double gainG = 0.0;
+double gyroT = 0.0;
 volatile double KP = 0.0;                            // proportional
 volatile double KI = 0.0;                            // integral
 volatile double KD = 0.0;                            // derivative
@@ -268,6 +271,7 @@ volatile unsigned long debounceDelay = 300;
 
 // EEPROM ##############################################################################################################
 // EEPROM macros
+#define GYROT_ADDRESS           0x1F
 #define FAIL_ADDRESS            0x1E
 #define LASTSTATE_ADDRESS       0x1D
 #define GAING_ADDRESS           0x1C
@@ -502,9 +506,12 @@ void cfgSensor(void) {
     iwdg_feed();
     feedSensorWtdg();
 
-    mpu.setThreshold(0.1);
+    displayMsg("Calibrando Gyro...");
 
-//    mpu.calibrateGyro(50);
+    gyroT = readEEPROM(GYROT_ADDRESS);
+
+    mpu.setThreshold(gyroT);
+    mpu.calibrateGyro(500);
 }
 
 
@@ -588,6 +595,16 @@ void refreshScreen(void) {
 }
 
 
+void displayMsg(String msg){
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(12, 25);
+    display.println(msg);
+    display.display();
+}
+
+
 void printControl(void) {
     /* Prints the display graphics
     */
@@ -638,8 +655,8 @@ void printControl(void) {
     display.println("TON");
     display.setCursor(48 + xOffset, 4 + yOffset);
 //    display.println((millis() - initTime) / 60000);
-    display.println(systick_uptime() / 60000);
-//    display.println(intCount);
+//    display.println(systick_uptime() / 60000);
+    display.println(*usedGAxis);
 
 
     // Ball
@@ -749,6 +766,11 @@ void printPidTuning(void) {
         display.setCursor(38, 32);
         display.println(gainG);
     } else if (pidCalib == 9) {
+        display.setCursor(22, 12);
+        display.println("Gr th:");
+        display.setCursor(38, 32);
+        display.println(gyroT);
+    } else if (pidCalib == 10) {
         display.setCursor(38, 12);
         display.println("Fail:");
         display.setCursor(50, 32);
@@ -858,6 +880,9 @@ void readPlusB(void) {
                 axis = constrain(axis + 1, 0, 2);
             } else if (pidCalib == 8) {
                 gainG = constrain(gainG + .01, 0, 1);
+            } else if (pidCalib == 9) {
+                gyroT = constrain(gyroT + .01, 0, 1);
+                mpu.setThreshold(gyroT);
             } else {
                 trimValue = constrain(trimValue - 0.1, -G, G);
                 filteredOutput = trimValue;
@@ -881,6 +906,9 @@ void readPlusB(void) {
                 alpha = constrain(alpha + 0.01, 0, 1);
             } else if (pidCalib == 8) {
                 gainG = constrain(gainG + .01, 0, 1);
+            } else if (pidCalib == 9) {
+                gyroT = constrain(gyroT + .01, 0, 1);
+                mpu.setThreshold(gyroT);
             } else {
                 trimValue = constrain(trimValue - 0.1, -G, G);
                 filteredOutput = trimValue;
@@ -935,6 +963,9 @@ void readMinusB(void) {
             } else if (pidCalib == 8) {
                 gainG = constrain(gainG - .01, 0, 1);
             } else if (pidCalib == 9) {
+                gyroT = constrain(gyroT - .01, 0, 1);
+                mpu.setThreshold(gyroT);
+            } else if (pidCalib == 10) {
                 failCount = 0;
                 writeEEPROM(FAIL_ADDRESS, failCount);
             } else {
@@ -960,6 +991,9 @@ void readMinusB(void) {
                 alpha = constrain(alpha - 0.01, 0, 1);
             } else if (pidCalib == 8) {
                 gainG = constrain(gainG - .01, 0, 1);
+            } else if (pidCalib == 9) {
+                gyroT = constrain(gyroT - .01, 0, 1);
+                mpu.setThreshold(gyroT);
             } else {
                 trimValue = constrain(trimValue + 0.1, -G, G);
                 filteredOutput = trimValue;
@@ -1035,14 +1069,15 @@ void readOnOff(void) {
             prevPidOnOff = pidOnOff;
         }
 
-        if (pidCalib != 9 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+        if (pidCalib != 10 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
             pidCalib++;
 
-        } else if (pidCalib == 9 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+        } else if (pidCalib == 10 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
             pidCalib = 0;
 
             writeEEPROM(AXIS_ADDRESS, axis);
             writeEEPROM(GAING_ADDRESS, gainG);
+            writeEEPROM(GYROT_ADDRESS, gyroT);
             writeEEPROM(SENSOR_REVERSE_ADDRESS, sensorReverse);
             writeEEPROM(ALPHA_ADDRESS, alpha);
             writeEEPROM(KP_ADDRESS, KP);
