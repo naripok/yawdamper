@@ -117,17 +117,18 @@
  * #####################################################################################################################
  */
 
-//#define DEBUG
+#define DEBUG
+#define PROBE_PIN               PB11
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
 
 // Time ################################################################################################################
-volatile long loopTime = 3000;
+volatile long loopTime = 2500;
 volatile long i = 1;
 volatile long waitTime = 0;
 
 // Watchdog ############################################################################################################
-#define IWDG_NUM                200
+#define IWDG_NUM                250
 #define IWDG_PRESCALER          IWDG_PRE_256
 
 
@@ -141,7 +142,7 @@ volatile long waitTime = 0;
 #define SCL                     PB6
 #define DLPF                    MPU6050_DLPF_6       // 5hz - 19ms delay
 
-#define SENSOR_IWDG             12000
+#define SENSOR_IWDG             15000
 #define T                       Timer2
 #define c                       2
 
@@ -310,8 +311,6 @@ uint16 eepromStatus;
 
 // FAULT HANDLING ######################################################################################################
 #define LED_PIN                 PC13
-#define PROBE_PIN               PB10
-
 
 volatile long failCount = 0;
 
@@ -425,6 +424,46 @@ void calibrateAccelerometer(void) {
 }
 
 
+void recoverSensor(void) {
+    // Power cycle MPU for fresh start
+    digitalWrite(SENSOR_VCC, LOW);
+
+    // Turn sensor off and wait for 100ms while feeding the watchdogs
+    for (int i = 0; i < 100; i++) {
+        feedSensorWtdg();
+        iwdg_feed();
+        delay(1);
+    }
+
+    digitalWrite(SENSOR_VCC, HIGH);
+    delay(1);
+
+    // Initialize MPU6050
+    while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
+        feedSensorWtdg();
+        iwdg_feed();
+        // While not initialized, display error msg
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setTextColor(WHITE);
+        display.setCursor(12, 25);
+        display.println("FALHA NO SENSOR");
+        display.display();
+        delay(1);
+    };
+
+    // Configure mpu
+    mpu.writeRegister8(0x24, 0b00001001);                                   // 400khz clock
+    mpu.writeRegister8(MPU6050_REG_GYRO_CONFIG, 0b00000000);                // Gyro self test disable
+    mpu.setDLPFMode(DLPF);                                                  // Set low pass filter band
+    mpu.setTempEnabled(false);                                              // disable temperature sensor
+//    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);                          // delay start for compatibility issues
+    mpu.writeRegister8(0x23, 0b00000000);                                   // Disable FIFO queues
+
+    mpu.setThreshold(gyroT);
+}
+
+
 void cfgSensor(void) {
     /* Configures MPU6050.
     */
@@ -436,23 +475,13 @@ void cfgSensor(void) {
     // Configure controller VCC pin as output
     pinMode(SENSOR_VCC, OUTPUT);
 
-    // Power cycle MPU for fresh start
-    digitalWrite(SENSOR_VCC, LOW);
-
-    // Turn sensor off and wait for 100ms while feeding the watchdogs
-    for (int i = 0; i < 100; i++) {
-        feedSensorWtdg();
-        iwdg_feed();
-        delay(1);
-    }
-
-    feedSensorWtdg();
     digitalWrite(SENSOR_VCC, HIGH);
     delay(3);
 
     // Initialize MPU6050
     while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
         feedSensorWtdg();
+        iwdg_feed();
         // While not initialized, display error msg
         display.clearDisplay();
         display.setTextSize(1);
@@ -472,7 +501,7 @@ void cfgSensor(void) {
 
     mpu.setDLPFMode(DLPF);                              // Set low pass filter band
     mpu.setTempEnabled(false);                          // disable temperature sensor
-    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);        // delay start for compatibility issues
+//    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);        // delay start for compatibility issues
 
     mpu.writeRegister8(0x23, 0b00000000);               // Disable FIFO queues
 //    mpu.writeRegister8(0x37, 0b00010000);               // Interruption pin config
@@ -511,7 +540,7 @@ void cfgSensor(void) {
     gyroT = readEEPROM(GYROT_ADDRESS);
 
     mpu.setThreshold(gyroT);
-    mpu.calibrateGyro(500);
+//    mpu.calibrateGyro(500);
 }
 
 
@@ -1233,7 +1262,7 @@ void loop() {
         i2c_disable(I2C1);
         i2c_master_enable(I2C1, I2C_BUS_RESET);
 
-        cfgSensor();
+        recoverSensor();
 
         canRead = true;
 
@@ -1269,9 +1298,11 @@ void loop() {
     }
 
     // Wait for loop to complete
-    waitTime = loopTime - (micros() - time);
+//    waitTime = loopTime - (micros() - time);
+//
+//    if (waitTime > 0)
+//        delay_us(waitTime);
 
-    if (waitTime > 0)
-        delay_us(waitTime);
+    while ((micros() - time) < loopTime);
 
 } // END LOOP
