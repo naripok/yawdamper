@@ -117,7 +117,7 @@
  * #####################################################################################################################
  */
 
-#define DEBUG
+//#define DEBUG
 #define PROBE_PIN               PB11
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
@@ -689,8 +689,8 @@ void printControl(void) {
     display.println("TON");
     display.setCursor(48 + xOffset, 4 + yOffset);
 //    display.println((millis() - initTime) / 60000);
-//    display.println(systick_uptime() / 60000);
-    display.println(*usedGAxis);
+    display.println(systick_uptime() / 60000);
+//    display.println(*usedGAxis);
 
 
     // Ball
