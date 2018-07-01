@@ -34,8 +34,8 @@ bool MPU6050::begin(mpu6050_dps_t scale, mpu6050_range_t range, int mpua)
     // Set Address
     mpuAddress = mpua;
 
-    Wire.begin();
     Wire.setClock(400000);
+    Wire.begin();
 
     // Reset calibrate values
     dg.XAxis = 0;
@@ -53,6 +53,33 @@ bool MPU6050::begin(mpu6050_dps_t scale, mpu6050_range_t range, int mpua)
     if (fastRegister8(MPU6050_REG_WHO_AM_I) != 0x68)
     {
 	return false;
+    }
+
+    // Set Clock Source
+    setClockSource(MPU6050_CLOCK_PLL_XGYRO);
+
+    // Set Scale & Range
+    setScale(scale);
+    setRange(range);
+
+    // Disable Sleep Mode
+    setSleepEnabled(false);
+
+    return true;
+}
+
+bool MPU6050::recover(mpu6050_dps_t scale, mpu6050_range_t range, int mpua) {
+    // Set Address
+    mpuAddress = mpua;
+
+    Wire.setClock(400000);
+    Wire.begin();
+
+
+    // Check MPU6050 Who Am I Register
+    if (fastRegister8(MPU6050_REG_WHO_AM_I) != 0x68)
+    {
+        return false;
     }
 
     // Set Clock Source

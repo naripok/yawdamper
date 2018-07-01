@@ -123,11 +123,11 @@
 //#define I2C_DEBUG
 
 // Time ################################################################################################################
-const long loopTime = 2500;
+const long loopTime = 3000;
 long i = 1;
 
 // Watchdog ############################################################################################################
-#define IWDG_NUM                200
+#define IWDG_NUM                210
 #define IWDG_PRESCALER          IWDG_PRE_256
 
 
@@ -139,9 +139,9 @@ long i = 1;
 //#define INT_PIN
 #define SDA                     PB7
 #define SCL                     PB6
-#define DLPF                    MPU6050_DLPF_4       // 5hz - 19ms delay
+#define DLPF                    MPU6050_DLPF_5       // 5hz - 19ms delay
 
-#define SENSOR_IWDG             10000
+#define SENSOR_IWDG             12000
 #define T                       Timer2
 #define c                       2
 
@@ -184,7 +184,7 @@ MPU6050 mpu;
 
 // PID #################################################################################################################
 // Time step vars
-const double PID_FREQ = 100;
+const double PID_FREQ = 200;
 const double TIME_STEP = 1 / PID_FREQ;
 double input = 0.0;
 double output = 0.0;
@@ -444,7 +444,7 @@ void recoverSensor(void) {
     mpu.writeRegister8(0x24, 0b00001001);                                   // 400khz clock
 
     // Initialize MPU6050
-    while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
+    while(!mpu.recover(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
         feedSensorWtdg();
         iwdg_feed();
         // While not initialized, display error msg
