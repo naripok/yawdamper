@@ -117,14 +117,14 @@
  * #####################################################################################################################
  */
 
-//#define DEBUG
+#define DEBUG
 #define PROBE_PIN               PB11
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
 
 // Time ################################################################################################################
-const long loopTime = 3000;
-long i = 1;
+const unsigned long loopTime = 3000;
+volatile unsigned int i = 1;
 
 // Watchdog ############################################################################################################
 #define IWDG_NUM                210
@@ -147,8 +147,8 @@ long i = 1;
 
 
 // Sensor vars
-const int SENSOR_MOD = 2;
-const int CALIBRATION_SAMPLES = 5000;                // calibration mean n of samples
+const unsigned int SENSOR_MOD = 2;
+const unsigned int CALIBRATION_SAMPLES = 5000;                // calibration mean n of samples
 const float G = 9.80665;                             // gravity as written in the sensor header
 
 float pitch = 0;                            // pitch measurement
@@ -184,7 +184,7 @@ MPU6050 mpu;
 
 // PID #################################################################################################################
 // Time step vars
-const double PID_FREQ = 200;
+const double PID_FREQ = 168;
 const double TIME_STEP = 1 / PID_FREQ;
 double input = 0.0;
 double output = 0.0;
@@ -310,7 +310,7 @@ uint16 eepromStatus;
 // FAULT HANDLING ######################################################################################################
 #define LED_PIN                 PC13
 
-volatile long failCount = 0;
+volatile unsigned long failCount = 0;
 
 
 void cfgProbes(void) {
@@ -552,6 +552,10 @@ void computePID(void) {
     input = setpoint - *usedAxis - *usedGAxis * gainG;
 
     if (pid.Compute()) {
+#ifdef DEBUG
+        flipP1();
+#endif
+
         // Filter output for smoothness
         filteredOutput = filteredOutput * (1 - alpha) + alpha * output;
 
@@ -729,23 +733,24 @@ void printTuning(void) {
     display.setTextSize(2);
     display.setTextColor(WHITE);
     display.setCursor(35, 6);
-    display.println("GANHO");
+    display.print("GANHO");
 
     display.setTextSize(1);
     display.setCursor(2 + offset, 48);
-    display.println("0");
+    display.print("0");
     display.setCursor(122 - offset, 48);
-    display.println("1");
+    display.print("1");
     display.setCursor(53, 48);
-    display.println(gain);
+    display.print(gain);
 
-    display.fillRect(63, 38, 3, 5, WHITE);
-    display.writeFastVLine(19 + offset, 40, 3, WHITE);
-    display.writeFastVLine(34 + offset, 40, 3, WHITE);
-    display.writeFastVLine(49 + offset, 40, 3, WHITE);
-    display.writeFastVLine(79 - offset, 40, 3, WHITE);
-    display.writeFastVLine(94 - offset, 40, 3, WHITE);
-    display.writeFastVLine(109 - offset, 40, 3, WHITE);
+//    display.fillRect(63, 38, 3, 5, WHITE);
+//    display.writeFastVLine(19 + offset, 40, 3, WHITE);
+//    display.writeFastVLine(37 + offset, 40, 3, WHITE);
+//    display.writeFastVLine(55 + offset, 40, 3, WHITE);
+    display.writeFastVLine(64, 40, 3, WHITE);
+//    display.writeFastVLine(73 - offset, 40, 3, WHITE);
+//    display.writeFastVLine(91 - offset, 40, 3, WHITE);
+//    display.writeFastVLine(109 - offset, 40, 3, WHITE);
 
     display.drawRect(4 + offset, 24, 121 - 2 * offset, 20, WHITE);
     display.fillRect(4 + offset, 24, (1 + gain * (120 - 2 * offset)), 20, WHITE);
@@ -1288,21 +1293,20 @@ void loop() {
 
         recoverSensor();
 
-        canRead = true;
-
         for (int i = 0; i < 10; i++) {
             feedSensorWtdg();
             iwdg_feed();
             delay(1);
         }
 
+        i = 1;
+        canRead = true;
+
     }
 
     if (i % SENSOR_MOD == 0) {
         if (canRead) {
-#ifdef DEBUG
-            flipP1();
-#endif
+
             // Feed the dogs...
             iwdg_feed();
             feedSensorWtdg();
@@ -1321,6 +1325,12 @@ void loop() {
     }
 
     // Wait for loop to complete
-    while ((micros() - time) < loopTime);
+    while ((micros() - time) < loopTime) {
+        if (I2C1->state == I2C_STATE_ERROR) {
+            canRead = false;
+            i = 1;
+            break;
+        }
+    }
 
 } // END LOOP
