@@ -139,7 +139,7 @@ volatile unsigned int i = 1;
 //#define INT_PIN
 #define SDA                     PB7
 #define SCL                     PB6
-#define DLPF                    MPU6050_DLPF_5       // 5hz - 19ms delay
+#define DLPF                    MPU6050_DLPF_6       // 5hz - 19ms delay
 
 #define SENSOR_IWDG             12000
 #define T                       Timer2
@@ -469,21 +469,19 @@ void recoverSensor(void) {
 
 
 void cfgSensor(void) {
-    /* Configures MPU6050.
-    */
+    /**
+     * Configures MPU6050.
+     */
 
     // Feed watchdog
     iwdg_feed();
-    feedSensorWtdg();
 
     // Configure controller VCC pin as output
     pinMode(SENSOR_VCC, OUTPUT);
-
     digitalWrite(SENSOR_VCC, HIGH);
 
     // Initialize MPU6050
     while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
-        feedSensorWtdg();
         iwdg_feed();
         // While not initialized, display error msg
         display.clearDisplay();
@@ -496,30 +494,23 @@ void cfgSensor(void) {
 
     // Configure mpu
     mpu.writeRegister8(0x24, 0b00001001);                                   // 400khz clock
-
     mpu.writeRegister8(MPU6050_REG_GYRO_CONFIG, 0b00000000);                // Gyro self test disable
-
-    feedSensorWtdg();
-
     mpu.setDLPFMode(DLPF);                                                  // Set low pass filter band
     mpu.setTempEnabled(false);                                              // disable temperature sensor
-//    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);                          // delay start for compatibility issues
-
     mpu.writeRegister8(0x23, 0b00000000);                                   // Disable FIFO queues
+//    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);                          // delay start for compatibility issues
 //    mpu.writeRegister8(0x37, 0b00010000);                                 // Interruption pin config
 //    mpu.writeRegister8(0x38, 0b00000001);                                 // Interruption config
-
-    feedSensorWtdg();
 
     // Read offsets from EEPROM
     offsetPitch = readEEPROM(OFFSET_PITCH_ADDRESS);
     offsetRoll = readEEPROM(OFFSET_ROLL_ADDRESS);
     offsetYaw = readEEPROM(OFFSET_YAW_ADDRESS);
-
-    feedSensorWtdg();
-
     // Read used axis from EEPROM
     axis = readEEPROM(AXIS_ADDRESS);
+    // Read all the other configs
+    gyroT = readEEPROM(GYROT_ADDRESS);
+
 
     // Update pointer to used axis
     if (axis == 0) {
@@ -535,12 +526,8 @@ void cfgSensor(void) {
 
     // Feed watchdog
     iwdg_feed();
-    feedSensorWtdg();
 
     displayMsg("Calibrando Gyro...");
-
-    gyroT = readEEPROM(GYROT_ADDRESS);
-
     mpu.setThreshold(gyroT);
     mpu.calibrateGyro(200);
 }
@@ -583,16 +570,10 @@ void cfgPID(void) {
     KD = readEEPROM(KD_ADDRESS);
     pidMode = readEEPROM(PID_MODE_ADDRESS);
     gainG = readEEPROM(GAING_ADDRESS);
-//    pidOn = readEEPROM(LASTSTATE_ADDRESS);
-
-//    if (pidOn) {
-//        filteredOutput = output = trimValue;
-//        pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
-//        pid.SetMode(AUTOMATIC);
-//        writeEEPROM(LASTSTATE_ADDRESS, 0);
-//    } else {
     filteredOutput = trimValue;
-//    }
+
+    pid.SetControllerDirection(pidMode);
+    pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
 }
 
 
