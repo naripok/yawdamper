@@ -34,8 +34,8 @@ bool MPU6050::begin(mpu6050_dps_t scale, mpu6050_range_t range, int mpua)
     // Set Address
     mpuAddress = mpua;
 
-    Wire.begin();
     Wire.setClock(400000);
+    Wire.begin();
 
     // Reset calibrate values
     dg.XAxis = 0;
@@ -53,6 +53,33 @@ bool MPU6050::begin(mpu6050_dps_t scale, mpu6050_range_t range, int mpua)
     if (fastRegister8(MPU6050_REG_WHO_AM_I) != 0x68)
     {
 	return false;
+    }
+
+    // Set Clock Source
+    setClockSource(MPU6050_CLOCK_PLL_XGYRO);
+
+    // Set Scale & Range
+    setScale(scale);
+    setRange(range);
+
+    // Disable Sleep Mode
+    setSleepEnabled(false);
+
+    return true;
+}
+
+bool MPU6050::recover(mpu6050_dps_t scale, mpu6050_range_t range, int mpua) {
+    // Set Address
+    mpuAddress = mpua;
+
+    Wire.setClock(400000);
+    Wire.begin();
+
+
+    // Check MPU6050 Who Am I Register
+    if (fastRegister8(MPU6050_REG_WHO_AM_I) != 0x68)
+    {
+        return false;
     }
 
     // Set Clock Source
@@ -600,18 +627,22 @@ void MPU6050::calibrateGyro(uint8_t samples)
     float sigmaZ = 0;
 
     // Read n-samples
-    for (uint8_t i = 0; i < samples; ++i)
-    {
-	readRawGyro();
-	sumX += rg.XAxis;
-	sumY += rg.YAxis;
-	sumZ += rg.ZAxis;
+    for (uint8_t i = 0; i < samples; ++i) {
 
-	sigmaX += rg.XAxis * rg.XAxis;
-	sigmaY += rg.YAxis * rg.YAxis;
-	sigmaZ += rg.ZAxis * rg.ZAxis;
+        Timer2.refresh();
+        iwdg_feed();
 
-	delay(5);
+
+        readRawGyro();
+        sumX += rg.XAxis;
+        sumY += rg.YAxis;
+        sumZ += rg.ZAxis;
+
+        sigmaX += rg.XAxis * rg.XAxis;
+        sigmaY += rg.YAxis * rg.YAxis;
+        sigmaZ += rg.ZAxis * rg.ZAxis;
+
+        delay(5);
     }
 
     // Calculate delta vectors
@@ -625,9 +656,8 @@ void MPU6050::calibrateGyro(uint8_t samples)
     th.ZAxis = sqrt((sigmaZ / 50) - (dg.ZAxis * dg.ZAxis));
 
     // If already set threshold, recalculate threshold vectors
-    if (actualThreshold > 0)
-    {
-	setThreshold(actualThreshold);
+    if (actualThreshold > 0) {
+	    setThreshold(actualThreshold);
     }
 }
 
@@ -638,7 +668,8 @@ uint8_t MPU6050::getThreshold(void)
 }
 
 // Set treshold value
-void MPU6050::setThreshold(uint8_t multiple)
+//void MPU6050::setThreshold(uint8_t multiple)
+void MPU6050::setThreshold(float multiple)
 {
     if (multiple > 0)
     {

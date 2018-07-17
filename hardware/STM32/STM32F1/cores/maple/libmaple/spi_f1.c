@@ -65,7 +65,7 @@ void spi_config_gpios(spi_dev *ignored __attribute__((unused)),
     if (as_master) {
      //   gpio_set_mode(nss_dev, nss_bit, GPIO_AF_OUTPUT_PP);// Roger Clark. Commented out, so that NSS can be driven as a normal GPIO pin during SPI use
         gpio_set_mode(comm_dev, sck_bit, GPIO_AF_OUTPUT_PP);
-        gpio_set_mode(comm_dev, miso_bit, GPIO_INPUT_FLOATING);
+//        gpio_set_mode(comm_dev, miso_bit, GPIO_INPUT_FLOATING);
         gpio_set_mode(comm_dev, mosi_bit, GPIO_AF_OUTPUT_PP);
     } else {
         gpio_set_mode(nss_dev, nss_bit, GPIO_INPUT_FLOATING);

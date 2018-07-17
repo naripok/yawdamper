@@ -202,7 +202,7 @@ void PID::Initialize()
  ******************************************************************************/
 void PID::SetControllerDirection(int Direction)
 {
-   if(inAuto && Direction !=controllerDirection)
+   if(inAuto && Direction != controllerDirection)
    {
       kp = (0 - kp);
       ki = (0 - ki);

@@ -24,6 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #if ARDUINO >= 100
 #include "Arduino.h"
 #include <libmaple/i2c.h>
+#include <libmaple/iwdg.h>
+#include <HardwareTimer.h>
 #else
 #include "WProgram.h"
 #endif
@@ -169,6 +171,7 @@ class MPU6050
     public:
 
 	bool begin(mpu6050_dps_t scale = MPU6050_SCALE_2000DPS, mpu6050_range_t range = MPU6050_RANGE_2G, int mpua = MPU6050_ADDRESS);
+	bool recover(mpu6050_dps_t scale = MPU6050_SCALE_2000DPS, mpu6050_range_t range = MPU6050_RANGE_2G, int mpua = MPU6050_ADDRESS);
 
 	void setClockSource(mpu6050_clockSource_t source);
 	void setScale(mpu6050_dps_t scale);
@@ -233,7 +236,7 @@ class MPU6050
 	void setAccelOffsetZ(int16_t offset);
 
 	void calibrateGyro(uint8_t samples = 50);
-	void setThreshold(uint8_t multiple = 1);
+	void setThreshold(float multiple = 1);
 	uint8_t getThreshold(void);
 
 	SignedVector readRawGyro(void);

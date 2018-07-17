@@ -32,7 +32,7 @@
  *
  */
 
- /**
+/**
  * Tau, 15/06/2018
  * Yawdamper master module
  *
@@ -45,43 +45,43 @@
  *
  * ## PINMAP ###########################################################################################################
  *
- *  OLED
+ *  OLED TODO
  *      PA4  -> RES
  *      PA5  -> SCK
  *      PA7  -> SDA
- *      PA3/mPB0  -> DC
- *      PA2/mPB2  -> CS
+ *      PB0  -> DC
+ *      PA6  -> CS
  *
- *  BUTTONS
+ *  BUTTONS TODO
  *      PB10 -> PLUS  -> PIN12
  *      PB11 -> MINUS -> PIN11
  *      PB1/mPB3  -> MODE  -> PIN13
  *
  *  SENSOR
- *      PB12 -> INT   -> PIN1
- *      PB7  -> SDA   -> PIN5
- *      PB6  -> SCL   -> PIN6
- *      GND  -> GND   -> PIN7
- *      3.3  -> VCC   -> PIN8
+ *      PB12 -> INT
+ *      PB7  -> SDA
+ *      PB6  -> SCL
+ *      GND  -> GND
+ *      3.3  -> VCC
  *
  *  SERVO
- *      PA0  -> PWM   -> PIN10
+ *      PA8  -> PWM
  *
  *  CONTROLLER OUTPUT CONNECTOR
- *      PIN1  -> PB12
+ *      PIN1  ->
  *      PIN2  ->
  *      PIN3  ->
  *      PIN4  ->
- *      PIN5  -> PB7
- *      PIN6  -> PB6
- *      PIN7  -> SENSOR GND
- *      PIN8  -> 3.3V
+ *      PIN5  -> SERVO GND
+ *      PIN6  ->
+ *      PIN7  ->
+ *      PIN8  ->
  *      PIN9  -> GND
- *      PIN10 -> PA9
+ *      PIN10 -> PA9 -> PWM
  *      PIN11 -> PB11
  *      PIN12 -> PB10
  *      PIN13 -> PB3
- *      PIN14 -> GND
+ *      PIN14 ->
  *      PIN15 -> 12V
  *
  *  SERVO CONNECTOR
@@ -104,10 +104,6 @@
 #include <libmaple/i2c.h>
 #include <libmaple/systick.h>
 
-// #include <libmaple/nvic.h>
-// #include <series/nvic.h>
-// #include "stm32f1/include/series/nvic.h"
-//#include <libmaple/libmaple.h>
 #include <libmaple/rcc.h>
 #include <libmaple/util.h>
 #include <libmaple/scb.h>
@@ -121,14 +117,17 @@
  * #####################################################################################################################
  */
 
+#define DEBUG
+#define PROBE_PIN               PB11
+#define DEBUG_LEVEL DEBUG_NONE
+//#define I2C_DEBUG
 
 // Time ################################################################################################################
-volatile long loopTime = 3000;
-volatile long i = 1;
-volatile long waitTime = 0;
+const unsigned long loopTime = 3000;
+volatile unsigned int i = 1;
 
 // Watchdog ############################################################################################################
-#define IWDG_NUM                200
+#define IWDG_NUM                210
 #define IWDG_PRESCALER          IWDG_PRE_256
 
 
@@ -136,39 +135,45 @@ volatile long waitTime = 0;
 // Sensor macros
 // #define SENSOR_SCL           PB6                  // m16
 // #define SENSOR_SDA           PB7                  // m15
-#define SENSOR_VCC              PB4                  // m26
-#define INT_PIN                 PB12//PA8                  // m27
-#define SDA                     PB7//PA7                  // m4
-#define SCL                     PB6//PA5                  // m6
+#define SENSOR_VCC              PB4
+//#define INT_PIN
+#define SDA                     PB7
+#define SCL                     PB6
 #define DLPF                    MPU6050_DLPF_6       // 5hz - 19ms delay
 
+#define SENSOR_IWDG             12000
+#define T                       Timer2
+#define c                       2
+
+
 // Sensor vars
-//const int SENSOR_MOD = 5;
-const int SENSOR_MOD = 2;
-const int CALIBRATION_SAMPLES = 5000;                // calibration mean n of samples
+const unsigned int SENSOR_MOD = 2;
+const unsigned int CALIBRATION_SAMPLES = 5000;                // calibration mean n of samples
 const float G = 9.80665;                             // gravity as written in the sensor header
 
-volatile float pitch = 0;                            // pitch measurement
-volatile float roll = 0;                             // roll measurement
-volatile float yaw = 0;                              // yaw measurement
+float pitch = 0;                            // pitch measurement
+float roll = 0;                             // roll measurement
+float yaw = 0;                              // yaw measurement
 
-volatile float offsetPitch;                          // offset after calibration
-volatile float offsetRoll;                           // offset after calibration
-volatile float offsetYaw;                            // offset after calibration
+float offsetPitch;                          // offset after calibration
+float offsetRoll;                           // offset after calibration
+float offsetYaw;                            // offset after calibration
+//
+//float offsetGx;                             // offset after calibration
+//float offsetGy;                             // offset after calibration
+//float offsetGz;                             // offset after calibration
 
-volatile float offsetGx;                             // offset after calibration
-volatile float offsetGy;                             // offset after calibration
-volatile float offsetGz;                             // offset after calibration
+float gyroX = 0;
+float gyroY = 0;
+float gyroZ = 0;
 
-volatile float gyroX = 0;
-volatile float gyroY = 0;
-volatile float gyroZ = 0;
+float gyroThreshold = 0.0;
 
-volatile float alpha = 0.1;                          // exponential filter decay
-volatile float *usedAxis;                            // pointer to used axis
-volatile float *usedGAxis;                            // pointer to used axis
-volatile int axis = 0;                               // axis selection helper variable
-volatile int sensorReverse = 1;
+float alpha = 1.0;                          // exponential filter decay
+float *usedAxis;                            // pointer to used axis
+float *usedGAxis;                            // pointer to used axis
+int axis = 0;                               // axis selection helper variable
+int sensorReverse = 1;
 volatile bool canRead = true;
 
 // Sensor instances
@@ -179,7 +184,7 @@ MPU6050 mpu;
 
 // PID #################################################################################################################
 // Time step vars
-const double PID_FREQ = 60;
+const double PID_FREQ = 168;
 const double TIME_STEP = 1 / PID_FREQ;
 double input = 0.0;
 double output = 0.0;
@@ -187,11 +192,12 @@ double filteredOutput = 0.0;
 double setpoint = 0.0;
 double gain = 0.0;
 double gainG = 0.0;
-volatile double KP = 0.0;                            // proportional
-volatile double KI = 0.0;                            // integral
-volatile double KD = 0.0;                            // derivative
-volatile int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
-volatile bool pidOn = false;                         // true if in automatic mode, false if in manual
+double gyroT = 0.0;
+double KP = 0.0;                            // proportional
+double KI = 0.0;                            // integral
+double KD = 0.0;                            // derivative
+int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
+bool pidOn = false;                         // true if in automatic mode, false if in manual
 
 
 // PID instance
@@ -200,17 +206,15 @@ PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/5, pidMode);
 
 // DISPLAY #############################################################################################################
 // Display macros
-#define OLED_DC                 PA3//PB0                  // m3
-#define OLED_CS                 PA2//PB2                  // m2
-#define OLED_RESET              PA4                       // m7
+#define OLED_DC                 PB0  // 7
+#define OLED_CS                 SS  // 5
+#define OLED_RESET              MISO  // 8
 
 // Display vars
-//const int DISPLAY_MOD = 23;
-const int DISPLAY_MOD = 5;
-volatile long time = micros();
-volatile long initTime = time / 1000;
+const int DISPLAY_MOD = 3;
+long time;
 
-volatile int j = 0; // activity counter
+int j = 0; // activity counter
 const int MSG_DELAY = 20;
 int e1 = 0;
 int e2 = 0;
@@ -218,8 +222,8 @@ int e3 = 0;
 int e4 = 0;
 int e5 = 0;
 int e6 = 0;
-volatile int pidCalib = 0;
-volatile int overflowCounter = 0;
+int pidCalib = 0;
+//volatile int overflowCounter = 0;
 
 // Display instance
 Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
@@ -227,15 +231,14 @@ Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
 // SERVO ###############################################################################################################
 // Servo macros
-#define SERVO_PIN               PA10//PA1                  // m27
+#define SERVO_PIN               PA8
 
 // Servo vars
-//const int SERVO_MOD = 11;
 const int SERVO_MOD = 3;
 const int SERVO_MIN_DEG = 0;
 const int SERVO_MAX_DEG = 180;
-volatile int pos = 90;                               // position in degrees
-volatile float trimValue = 0;                        // value of output when pid is on manual mode
+int pos = 90;                               // position in degrees
+float trimValue = 0;                        // value of output when pid is on manual mode
 
 // Servo instance
 Servo servo;
@@ -243,31 +246,31 @@ Servo servo;
 
 // BUTTONS #############################################################################################################
 // Buttons macros
-#define ON_OFF_PIN              PB1//PB3                  // m19
-#define PLUS_PIN                PB10                 // m1
-#define MINUS_PIN               PB11                 // m0
+#define ON_OFF_PIN              PB13
+#define PLUS_PIN                PB14
+#define MINUS_PIN               PB15
 
 // Buttons vars
-//const int B_MOD = 49;
-const int B_MOD = 7;
-volatile bool onOff;
-volatile bool pidOnOff;
-volatile bool minusB;
-volatile bool plusB;
-volatile bool prevOnOff;
-volatile bool prevPidOnOff;
-volatile bool prevCalibration;
-volatile bool prevPlusB;
-volatile bool prevMinusB;
-volatile unsigned long pressTime;
-volatile unsigned long pidPressTime;
-volatile unsigned long releaseTime = -1500; // initialized as -1500 so that printTuning is not called at the first loops
-volatile unsigned long calibrationTime = 1000;
-volatile unsigned long debounceDelay = 300;
+const int B_MOD = 5;
+bool onOff;
+bool pidOnOff;
+bool minusB;
+bool plusB;
+bool prevOnOff;
+bool prevPidOnOff;
+bool prevCalibration;
+bool prevPlusB;
+bool prevMinusB;
+unsigned long pressTime;
+unsigned long pidPressTime;
+unsigned long releaseTime = -1500; // initialized as -1500 so that printTuning is not called at the first loops
+const unsigned long calibrationTime = 1000;
+const unsigned long debounceDelay = 300;
 
 
 // EEPROM ##############################################################################################################
 // EEPROM macros
+#define GYROT_ADDRESS           0x1F
 #define FAIL_ADDRESS            0x1E
 #define LASTSTATE_ADDRESS       0x1D
 #define GAING_ADDRESS           0x1C
@@ -305,45 +308,27 @@ uint16 eepromStatus;
  */
 
 // FAULT HANDLING ######################################################################################################
-#define DEBUG_LEVEL DEBUG_NONE
-//#define I2C_DEBUG
-
 #define LED_PIN                 PC13
-#define PROBE_PIN               PA15
-#define PROBE2_PIN              PB13
-#define SENSOR_IWDG             10000
 
-volatile long failCount = 0;
+volatile unsigned long failCount = 0;
 
 
 void cfgProbes(void) {
     pinMode(PROBE_PIN, OUTPUT);
-    digitalWrite(PROBE_PIN, HIGH);
-    pinMode(PROBE2_PIN, OUTPUT);
-    digitalWrite(PROBE2_PIN, HIGH);
+    digitalWrite(PROBE_PIN, LOW);
+
 }
+
 
 void flipP1(void) {
     digitalWrite(PROBE_PIN, !digitalRead(PROBE_PIN));
 }
 
-void flipP2(void) {
-    digitalWrite(PROBE2_PIN, !digitalRead(PROBE2_PIN));
-}
 
 // TIMER PROCEDURES ####################################################################################################
-
-#define T                   Timer4
-#define c                   1
-
 void cfgSensorWtdg(void) {
     T.setPeriod(SENSOR_IWDG);
     T.attachInterrupt(c, resetSensor);
-
-//    nvic_irq_disable(NVIC_I2C1_ER);
-//    nvic_irq_disable(NVIC_HARDFAULT);
-//    nvic_irq_disable(NVIC_BUS_FAULT);
-//    nvic_irq_disable(NVIC_USAGE_FAULT);
 
 }
 
@@ -352,9 +337,8 @@ void resetSensor(void) {
     failCount++;
 
     canRead = false;
-
-    writeEEPROM(LASTSTATE_ADDRESS, pidOn);
     writeEEPROM(FAIL_ADDRESS, failCount);
+//    writeEEPROM(LASTSTATE_ADDRESS, pidOn);
 }
 
 
@@ -378,9 +362,9 @@ void readSensor(void) {
     pitch = (pitch * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normA.YAxis - offsetPitch));
     yaw = (yaw * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normA.ZAxis - offsetYaw));
 
-    gyroX = (gyroX * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.XAxis / 5 - offsetGx));
-    gyroY = (gyroY * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.YAxis / 5 - offsetGy));
-    gyroZ = (gyroZ * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.ZAxis / 5 - offsetGz));
+    gyroX = (gyroX * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.XAxis));
+    gyroY = (gyroY * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.YAxis));
+    gyroZ = (gyroZ * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.ZAxis));
 }
 
 
@@ -438,36 +422,31 @@ void calibrateAccelerometer(void) {
 }
 
 
-void cfgSensor(void) {
-    /* Configures MPU6050.
-    */
-
-    // Feed watchdog
-    iwdg_feed();
-    feedSensorWtdg();
-
-    // Configure controller VCC pin as output
-    pinMode(SENSOR_VCC, OUTPUT);
-
-    // Config interruption pin
-    // Set INT controller port to input and attach interruption to it
-    pinMode(INT_PIN, INPUT_PULLUP);
-//    attachInterrupt(digitalPinToInterrupt(INT_PIN), dataReady, FALLING);
-
+void recoverSensor(void) {
     // Power cycle MPU for fresh start
     digitalWrite(SENSOR_VCC, LOW);
+
+    // Turn sensor off and wait for 100ms while feeding the watchdogs
     for (int i = 0; i < 100; i++) {
         feedSensorWtdg();
         iwdg_feed();
         delay(1);
     }
-//
+
     digitalWrite(SENSOR_VCC, HIGH);
-    delay(1);
+
+    for (int i = 0; i < 100; i++) {
+        feedSensorWtdg();
+        iwdg_feed();
+        delay(1);
+    }
+
+    mpu.writeRegister8(0x24, 0b00001001);                                   // 400khz clock
 
     // Initialize MPU6050
-    while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
+    while(!mpu.recover(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
         feedSensorWtdg();
+        iwdg_feed();
         // While not initialized, display error msg
         display.clearDisplay();
         display.setTextSize(1);
@@ -475,31 +454,63 @@ void cfgSensor(void) {
         display.setCursor(12, 25);
         display.println("FALHA NO SENSOR");
         display.display();
-        delay(1);
+
     };
 
     // Configure mpu
-    mpu.writeRegister8(0x24, 0b00001001);               // 400khz clock
+//    mpu.writeRegister8(MPU6050_REG_GYRO_CONFIG, 0b00000000);              // Gyro self test disable
+    mpu.setDLPFMode(DLPF);                                                  // Set low pass filter band
+    mpu.setTempEnabled(false);                                              // disable temperature sensor
+//    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);                          // delay start for compatibility issues
+    mpu.writeRegister8(0x23, 0b00000000);                                   // Disable FIFO queues
 
-    mpu.writeRegister8(MPU6050_REG_GYRO_CONFIG, 0b00000000);               // Gyro self test disable
+    mpu.setThreshold(gyroT);
+}
 
-    mpu.setDLPFMode(DLPF);                              // Set low pass filter band
-    mpu.setTempEnabled(false);                          // disable temperature sensor
-    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);        // delay start for compatibility issues
 
-    mpu.writeRegister8(0x23, 0b00000000);               // Disable FIFO queues
-//    mpu.writeRegister8(0x37, 0b00010000);               // Interruption pin config
-//    mpu.writeRegister8(0x38, 0b00000001);               // Interruption config
+void cfgSensor(void) {
+    /**
+     * Configures MPU6050.
+     */
 
-    feedSensorWtdg();
+    // Feed watchdog
+    iwdg_feed();
+
+    // Configure controller VCC pin as output
+    pinMode(SENSOR_VCC, OUTPUT);
+    digitalWrite(SENSOR_VCC, HIGH);
+
+    // Initialize MPU6050
+    while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G)) {
+        iwdg_feed();
+        // While not initialized, display error msg
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setTextColor(WHITE);
+        display.setCursor(12, 25);
+        display.println("FALHA NO SENSOR");
+        display.display();
+    };
+
+    // Configure mpu
+    mpu.writeRegister8(0x24, 0b00001001);                                   // 400khz clock
+    mpu.writeRegister8(MPU6050_REG_GYRO_CONFIG, 0b00000000);                // Gyro self test disable
+    mpu.setDLPFMode(DLPF);                                                  // Set low pass filter band
+    mpu.setTempEnabled(false);                                              // disable temperature sensor
+    mpu.writeRegister8(0x23, 0b00000000);                                   // Disable FIFO queues
+//    mpu.setAccelPowerOnDelay(MPU6050_DELAY_1MS);                          // delay start for compatibility issues
+//    mpu.writeRegister8(0x37, 0b00010000);                                 // Interruption pin config
+//    mpu.writeRegister8(0x38, 0b00000001);                                 // Interruption config
 
     // Read offsets from EEPROM
     offsetPitch = readEEPROM(OFFSET_PITCH_ADDRESS);
     offsetRoll = readEEPROM(OFFSET_ROLL_ADDRESS);
     offsetYaw = readEEPROM(OFFSET_YAW_ADDRESS);
-
     // Read used axis from EEPROM
     axis = readEEPROM(AXIS_ADDRESS);
+    // Read all the other configs
+    gyroT = readEEPROM(GYROT_ADDRESS);
+
 
     // Update pointer to used axis
     if (axis == 0) {
@@ -515,25 +526,30 @@ void cfgSensor(void) {
 
     // Feed watchdog
     iwdg_feed();
-    feedSensorWtdg();
 
-    mpu.setThreshold(0.1);
-
-//    mpu.calibrateGyro(50);
+    displayMsg("Calibrando Gyro...");
+    mpu.setThreshold(gyroT);
+    mpu.calibrateGyro(200);
 }
 
 
 // PID procedures ######################################################################################################
 void computePID(void) {
     // Calculates the output of the PID
-    input = setpoint - *usedAxis - *usedGAxis * gainG;
+    input = setpoint - *usedAxis;
 
     if (pid.Compute()) {
+#ifdef DEBUG
+        flipP1();
+#endif
+
         // Filter output for smoothness
-        filteredOutput = filteredOutput * (1 - alpha) + alpha * output;
+        filteredOutput = constrain(filteredOutput * (1 - alpha) + alpha * (output - *usedGAxis * gainG), -G, G);
 
         // Converts the output to a value in degree
         pos = convert_output(filteredOutput);
+
+        driveServo();
     }
 }
 
@@ -554,12 +570,10 @@ void cfgPID(void) {
     KD = readEEPROM(KD_ADDRESS);
     pidMode = readEEPROM(PID_MODE_ADDRESS);
     gainG = readEEPROM(GAING_ADDRESS);
-    pidOn = readEEPROM(LASTSTATE_ADDRESS);
-
-    if (pidOn)
-        writeEEPROM(LASTSTATE_ADDRESS, 0);
-
     filteredOutput = trimValue;
+
+    pid.SetControllerDirection(pidMode);
+    pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
 }
 
 
@@ -579,7 +593,8 @@ void cfgServo(void) {
     /* Configures the servo.
     */
 //    servo.attach(SERVO_PIN, 5000 - 2400, 5000 - 544, 0, 180);
-    servo.attach(SERVO_PIN, 1000, 2000, 0, 180);
+//    servo.attach(SERVO_PIN, 1000, 2000, 0, 180);
+    servo.attach(SERVO_PIN, 1200, 2000, 0, 180);
     servo.write(convert_output(trimValue));
 }
 
@@ -596,6 +611,16 @@ void refreshScreen(void) {
     } else {
         printControl();
     };
+}
+
+
+void displayMsg(String msg){
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(12, 25);
+    display.println(msg);
+    display.display();
 }
 
 
@@ -650,7 +675,7 @@ void printControl(void) {
     display.setCursor(48 + xOffset, 4 + yOffset);
 //    display.println((millis() - initTime) / 60000);
     display.println(systick_uptime() / 60000);
-//    display.println(intCount);
+//    display.println(*usedGAxis);
 
 
     // Ball
@@ -689,23 +714,24 @@ void printTuning(void) {
     display.setTextSize(2);
     display.setTextColor(WHITE);
     display.setCursor(35, 6);
-    display.println("GANHO");
+    display.print("GANHO");
 
     display.setTextSize(1);
     display.setCursor(2 + offset, 48);
-    display.println("0");
+    display.print("0");
     display.setCursor(122 - offset, 48);
-    display.println("1");
+    display.print("1");
     display.setCursor(53, 48);
-    display.println(gain);
+    display.print(gain);
 
-    display.fillRect(63, 38, 3, 5, WHITE);
-    display.writeFastVLine(19 + offset, 40, 3, WHITE);
-    display.writeFastVLine(34 + offset, 40, 3, WHITE);
-    display.writeFastVLine(49 + offset, 40, 3, WHITE);
-    display.writeFastVLine(79 - offset, 40, 3, WHITE);
-    display.writeFastVLine(94 - offset, 40, 3, WHITE);
-    display.writeFastVLine(109 - offset, 40, 3, WHITE);
+//    display.fillRect(63, 38, 3, 5, WHITE);
+//    display.writeFastVLine(19 + offset, 40, 3, WHITE);
+//    display.writeFastVLine(37 + offset, 40, 3, WHITE);
+//    display.writeFastVLine(55 + offset, 40, 3, WHITE);
+    display.writeFastVLine(64, 40, 3, WHITE);
+//    display.writeFastVLine(73 - offset, 40, 3, WHITE);
+//    display.writeFastVLine(91 - offset, 40, 3, WHITE);
+//    display.writeFastVLine(109 - offset, 40, 3, WHITE);
 
     display.drawRect(4 + offset, 24, 121 - 2 * offset, 20, WHITE);
     display.fillRect(4 + offset, 24, (1 + gain * (120 - 2 * offset)), 20, WHITE);
@@ -760,6 +786,11 @@ void printPidTuning(void) {
         display.setCursor(38, 32);
         display.println(gainG);
     } else if (pidCalib == 9) {
+        display.setCursor(22, 12);
+        display.println("Gr th:");
+        display.setCursor(38, 32);
+        display.println(gyroT);
+    } else if (pidCalib == 10) {
         display.setCursor(38, 12);
         display.println("Fail:");
         display.setCursor(50, 32);
@@ -841,7 +872,7 @@ void readPlusB(void) {
      PID is on automatic mode and decreases the output if PID
      is on manual mode.
     */
-    plusB = !digitalRead(PLUS_PIN);
+    plusB = digitalRead(PLUS_PIN);
 
     if (plusB && !minusB) {
         if (prevPlusB == false) {
@@ -868,13 +899,17 @@ void readPlusB(void) {
             } else if (pidCalib == 7) {
                 axis = constrain(axis + 1, 0, 2);
             } else if (pidCalib == 8) {
-                gainG = constrain(gainG + .01, 0, 1);
+                gainG = constrain(gainG + .01, -1, 1);
+            } else if (pidCalib == 9) {
+                gyroT = constrain(gyroT + .01, 0, 1);
+                mpu.setThreshold(gyroT);
             } else {
                 trimValue = constrain(trimValue - 0.1, -G, G);
                 filteredOutput = trimValue;
                 servo.write(convert_output(trimValue));
             };
             prevPlusB = true;
+
         } else if ((millis() - pressTime) > 500){
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + 0.01, 0, 1);
@@ -888,16 +923,28 @@ void readPlusB(void) {
             } else if (pidCalib == 3) {
                 KD = constrain(KD + 0.01, 0, 9);
                 pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
+            } else if (pidCalib == 4) {
+                ;
             } else if (pidCalib == 5) {
                 alpha = constrain(alpha + 0.01, 0, 1);
+            } else if (pidCalib == 6) {
+                ;
+            } else if (pidCalib == 7) {
+                ;
             } else if (pidCalib == 8) {
-                gainG = constrain(gainG + .01, 0, 1);
+                gainG = constrain(gainG + .01, -1, 1);
+            } else if (pidCalib == 9) {
+                gyroT = constrain(gyroT + .01, 0, 1);
+                mpu.setThreshold(gyroT);
+            } else if (pidCalib == 10) {
+                ;
             } else {
                 trimValue = constrain(trimValue - 0.1, -G, G);
                 filteredOutput = trimValue;
                 servo.write(convert_output(trimValue));
             };
         };
+
     } else {
         if(prevPlusB == true) {
             releaseTime = millis();
@@ -917,7 +964,7 @@ void readMinusB(void) {
      PID is on automatic mode and reducing the output if PID
      is on manual mode.
     */
-    minusB = !digitalRead(MINUS_PIN);
+    minusB = digitalRead(MINUS_PIN);
 
     if (minusB && !plusB) {
         if (prevMinusB == false) {
@@ -944,8 +991,11 @@ void readMinusB(void) {
             } else if (pidCalib == 7) {
                 axis = constrain(axis - 1, 0, 2);
             } else if (pidCalib == 8) {
-                gainG = constrain(gainG - .01, 0, 1);
+                gainG = constrain(gainG - .01, -1, 1);
             } else if (pidCalib == 9) {
+                gyroT = constrain(gyroT - .01, 0, 1);
+                mpu.setThreshold(gyroT);
+            } else if (pidCalib == 10) {
                 failCount = 0;
                 writeEEPROM(FAIL_ADDRESS, failCount);
             } else {
@@ -954,6 +1004,7 @@ void readMinusB(void) {
                 servo.write(convert_output(trimValue));
             }
             prevMinusB = true;
+
         } else if ((millis() - pressTime) > 500){
             if (pidOn && !pidCalib) {
                 gain = constrain(gain - 0.01, 0, 1);
@@ -967,16 +1018,28 @@ void readMinusB(void) {
             } else if (pidCalib == 3) {
                 KD = constrain(KD - 0.01, 0, 9);
                 pid.SetTunings(gain*KP, gain*KI, gain*KD/5);
+            } else if (pidCalib == 4) {
+                ;
             } else if (pidCalib == 5) {
                 alpha = constrain(alpha - 0.01, 0, 1);
+            } else if (pidCalib == 6) {
+                ;
+            } else if (pidCalib == 7) {
+                ;
             } else if (pidCalib == 8) {
-                gainG = constrain(gainG - .01, 0, 1);
+                gainG = constrain(gainG - .01, -1, 1);
+            } else if (pidCalib == 9) {
+                gyroT = constrain(gyroT - .01, 0, 1);
+                mpu.setThreshold(gyroT);
+            } else if (pidCalib == 10) {
+                ;
             } else {
                 trimValue = constrain(trimValue + 0.1, -G, G);
                 filteredOutput = trimValue;
                 servo.write(convert_output(trimValue));
             }
         }
+
     } else {
         if(prevMinusB == true) {
             releaseTime = millis();
@@ -998,9 +1061,9 @@ void readOnOff(void) {
 
     //sample the state of the button - is it pressed or not?
     if (!pidCalib) {
-        onOff = !digitalRead(ON_OFF_PIN);
+        onOff = digitalRead(ON_OFF_PIN);
     } else {
-        pidOnOff = !digitalRead(ON_OFF_PIN);
+        pidOnOff = digitalRead(ON_OFF_PIN);
     }
 
     //filter out any noise by setting a time buffer
@@ -1046,14 +1109,15 @@ void readOnOff(void) {
             prevPidOnOff = pidOnOff;
         }
 
-        if (pidCalib != 9 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+        if (pidCalib != 10 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
             pidCalib++;
 
-        } else if (pidCalib == 9 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+        } else if (pidCalib == 10 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
             pidCalib = 0;
 
             writeEEPROM(AXIS_ADDRESS, axis);
             writeEEPROM(GAING_ADDRESS, gainG);
+            writeEEPROM(GYROT_ADDRESS, gyroT);
             writeEEPROM(SENSOR_REVERSE_ADDRESS, sensorReverse);
             writeEEPROM(ALPHA_ADDRESS, alpha);
             writeEEPROM(KP_ADDRESS, KP);
@@ -1082,9 +1146,9 @@ void cfgButtons(void) {
     /**
      * Configures the buttons and switches.
      */
-    pinMode(ON_OFF_PIN, INPUT_PULLUP);
-    pinMode(PLUS_PIN, INPUT_PULLUP);
-    pinMode(MINUS_PIN, INPUT_PULLUP);
+    pinMode(ON_OFF_PIN, INPUT_PULLDOWN);
+    pinMode(PLUS_PIN, INPUT_PULLDOWN);
+    pinMode(MINUS_PIN, INPUT_PULLDOWN);
 }
 
 
@@ -1175,39 +1239,28 @@ void cfgLED(void) {
 
 void setup() {
 //    cfgLED();
-//    cfgProbes();
+#ifdef DEBUG
+    cfgProbes();
+#endif
 
-    cfgDisplay();
     cfgEEPROM();
+    cfgPID();
+    cfgServo();
+    cfgDisplay();
 
     iwdg_init(IWDG_PRE_256, IWDG_NUM); // enable watchdog
 
     cfgSensor();
     cfgButtons();
-    cfgPID();
-    cfgServo();
     cfgSensorWtdg();
 
     failCount = readEEPROM(FAIL_ADDRESS);
-//    writeEEPROM(FAIL_ADDRESS, 0);
+    feedSensorWtdg();
+
 }
 
 
 void loop() {
-
-    // Feed the dog...
-    iwdg_feed();
-    feedSensorWtdg();
-
-    if (!canRead) {
-        i2c_disable(I2C1);
-        i2c_master_enable(I2C1, I2C_BUS_RESET);
-
-        cfgSensor();
-
-        canRead = true;
-
-    }
 
     // Keep initial loop time
     time = micros();
@@ -1215,15 +1268,33 @@ void loop() {
     // Increase counter
     i++;
 
-    if (i % SENSOR_MOD == 0) {
-        if (canRead)
+    if (!canRead) {
+        i2c_disable(I2C1);
+        i2c_master_enable(I2C1, I2C_BUS_RESET);
+
+        recoverSensor();
+
+        for (int i = 0; i < 10; i++) {
             feedSensorWtdg();
+            iwdg_feed();
+            delay(1);
+        }
+
+        i = 1;
+        canRead = true;
+
+    }
+
+    if (i % SENSOR_MOD == 0) {
+        if (canRead) {
+
+            // Feed the dogs...
+            iwdg_feed();
+            feedSensorWtdg();
+
             readSensor();
-
+        }
         computePID();
-
-    } else if (i % SERVO_MOD == 0) {
-        driveServo();
 
     } else if (i % DISPLAY_MOD == 0) {
         refreshScreen();
@@ -1235,9 +1306,12 @@ void loop() {
     }
 
     // Wait for loop to complete
-    waitTime = loopTime - (micros() - time);
-
-    if (waitTime > 0)
-        delay_us(waitTime);
+    while ((micros() - time) < loopTime) {
+        if (I2C1->state == I2C_STATE_ERROR) {
+            canRead = false;
+            i = 1;
+            break;
+        }
+    }
 
 } // END LOOP

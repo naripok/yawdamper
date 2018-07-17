@@ -192,8 +192,8 @@ void i2c_master_enable(i2c_dev *dev, uint32 flags) {
     /* PE must be disabled to configure the device */
 //    ASSERT(!(dev->regs->CR1 & I2C_CR1_PE));
     if (!(dev->regs->CR1 & I2C_CR1_PE))  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        dev->regs->CR1 = dev->regs->CR1 & I2C_CR1_PE;
-//        dev->state = I2C_STATE_ERROR;
+//        dev->regs->CR1 = dev->regs->CR1 & I2C_CR1_PE;
+        dev->state = I2C_STATE_ERROR;
 
 
     /* Ugh */
