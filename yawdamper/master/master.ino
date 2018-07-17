@@ -679,7 +679,7 @@ void printControl(void) {
 
 
     // Ball
-    display.fillCircle(constrain(int(56.5 + *usedAxis * (258 / (2 * G))) + xOffset, 14 + xOffset, 98 + xOffset), 22 + yOffset, 5, WHITE);
+    display.fillCircle(constrain(int(56.5 + *usedAxis * (258 / G)) + xOffset, 14 + xOffset, 98 + xOffset), 22 + yOffset, 5, WHITE);
 
     // Gyro
     display.fillRect(constrain(int(55.5 + *usedGAxis * (96 / (2 * G))) + xOffset, 9 + xOffset, 101 + xOffset), 37 + yOffset, 3, 6, WHITE);
