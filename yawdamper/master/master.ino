@@ -358,13 +358,13 @@ void readSensor(void) {
     normG = mpu.readNormalizeGyro();
 
     // Apply exponential filtering to chosen axis
-    roll = (roll * (1 - (alpha / 40)) + sensorReverse * (alpha / 40) * (normA.XAxis - offsetRoll));
-    pitch = (pitch * (1 - (alpha / 20)) + sensorReverse * (alpha / 40) * (normA.YAxis - offsetPitch));
-    yaw = (yaw * (1 - (alpha / 40)) + sensorReverse * (alpha / 40) * (normA.ZAxis - offsetYaw));
+    roll = (roll * (1 - (alpha / 30)) + sensorReverse * (alpha / 30) * (normA.XAxis - offsetRoll));
+    pitch = (pitch * (1 - (alpha / 30)) + sensorReverse * (alpha / 30) * (normA.YAxis - offsetPitch));
+    yaw = (yaw * (1 - (alpha / 30)) + sensorReverse * (alpha / 30) * (normA.ZAxis - offsetYaw));
 
-    gyroX = (gyroX * (1 - (alpha / 40)) + sensorReverse * (alpha / 40) * (normG.XAxis));
-    gyroY = (gyroY * (1 - (alpha / 40)) + sensorReverse * (alpha / 40) * (normG.YAxis));
-    gyroZ = (gyroZ * (1 - (alpha / 40)) + sensorReverse * (alpha / 40) * (normG.ZAxis));
+    gyroX = (gyroX * (1 - (alpha / 30)) + sensorReverse * (alpha / 30) * (normG.XAxis));
+    gyroY = (gyroY * (1 - (alpha / 30)) + sensorReverse * (alpha / 30) * (normG.YAxis));
+    gyroZ = (gyroZ * (1 - (alpha / 30)) + sensorReverse * (alpha / 30) * (normG.ZAxis));
 }
 
 
@@ -544,7 +544,7 @@ void computePID(void) {
 #endif
 
         // Filter output for smoothness
-        filteredOutput = constrain(filteredOutput * (1 - alpha) + alpha * (output - *usedGAxis * gainG / (1 + abs(input * 10))), -G, G);
+        filteredOutput = constrain(filteredOutput * (1 - alpha) + alpha * (output - *usedGAxis * gainG / (1 + abs(input * 50))), -G, G);
 
         // Converts the output to a value in degree
         pos = convert_output(filteredOutput);
@@ -937,7 +937,7 @@ void updateAdjusts(int direction) {
             failCount = 0;
             writeEEPROM(FAIL_ADDRESS, failCount);
         } else {
-            trimValue = constrain(trimValue + direction * 0.1, -G, G);
+            trimValue = constrain(trimValue - direction * 0.1, -G, G);
             filteredOutput = trimValue;
             servo.write(convert_output(trimValue));
         }
@@ -972,7 +972,7 @@ void updateAdjusts(int direction) {
         } else if (pidCalib == 10) {
             ;
         } else {
-            trimValue = constrain(trimValue + direction * 0.1, -G, G);
+            trimValue = constrain(trimValue - direction * 0.1, -G, G);
             filteredOutput = trimValue;
             servo.write(convert_output(trimValue));
         }
