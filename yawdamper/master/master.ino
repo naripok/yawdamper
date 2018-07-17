@@ -49,8 +49,8 @@
  *      PA4  -> RES
  *      PA5  -> SCK
  *      PA7  -> SDA
- *      PA3/mPB0  -> DC
- *      PA2/mPB2  -> CS
+ *      PB0  -> DC
+ *      PA6  -> CS
  *
  *  BUTTONS TODO
  *      PB10 -> PLUS  -> PIN12
@@ -362,9 +362,9 @@ void readSensor(void) {
     pitch = (pitch * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normA.YAxis - offsetPitch));
     yaw = (yaw * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normA.ZAxis - offsetYaw));
 
-    gyroX = (gyroX * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.XAxis / 5));
-    gyroY = (gyroY * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.YAxis / 5));
-    gyroZ = (gyroZ * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.ZAxis / 5));
+    gyroX = (gyroX * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.XAxis));
+    gyroY = (gyroY * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.YAxis));
+    gyroZ = (gyroZ * (1 - (alpha / 20)) + sensorReverse * (alpha / 20) * (normG.ZAxis));
 }
 
 
@@ -536,7 +536,7 @@ void cfgSensor(void) {
 // PID procedures ######################################################################################################
 void computePID(void) {
     // Calculates the output of the PID
-    input = setpoint - *usedAxis - *usedGAxis * gainG;
+    input = setpoint - *usedAxis;
 
     if (pid.Compute()) {
 #ifdef DEBUG
@@ -544,7 +544,7 @@ void computePID(void) {
 #endif
 
         // Filter output for smoothness
-        filteredOutput = filteredOutput * (1 - alpha) + alpha * output;
+        filteredOutput = constrain(filteredOutput * (1 - alpha) + alpha * (output - *usedGAxis * gainG), -G, G);
 
         // Converts the output to a value in degree
         pos = convert_output(filteredOutput);
@@ -899,7 +899,7 @@ void readPlusB(void) {
             } else if (pidCalib == 7) {
                 axis = constrain(axis + 1, 0, 2);
             } else if (pidCalib == 8) {
-                gainG = constrain(gainG + .01, 0, 1);
+                gainG = constrain(gainG + .01, -1, 1);
             } else if (pidCalib == 9) {
                 gyroT = constrain(gyroT + .01, 0, 1);
                 mpu.setThreshold(gyroT);
@@ -932,7 +932,7 @@ void readPlusB(void) {
             } else if (pidCalib == 7) {
                 ;
             } else if (pidCalib == 8) {
-                gainG = constrain(gainG + .01, 0, 1);
+                gainG = constrain(gainG + .01, -1, 1);
             } else if (pidCalib == 9) {
                 gyroT = constrain(gyroT + .01, 0, 1);
                 mpu.setThreshold(gyroT);
@@ -991,7 +991,7 @@ void readMinusB(void) {
             } else if (pidCalib == 7) {
                 axis = constrain(axis - 1, 0, 2);
             } else if (pidCalib == 8) {
-                gainG = constrain(gainG - .01, 0, 1);
+                gainG = constrain(gainG - .01, -1, 1);
             } else if (pidCalib == 9) {
                 gyroT = constrain(gyroT - .01, 0, 1);
                 mpu.setThreshold(gyroT);
@@ -1027,7 +1027,7 @@ void readMinusB(void) {
             } else if (pidCalib == 7) {
                 ;
             } else if (pidCalib == 8) {
-                gainG = constrain(gainG - .01, 0, 1);
+                gainG = constrain(gainG - .01, -1, 1);
             } else if (pidCalib == 9) {
                 gyroT = constrain(gyroT - .01, 0, 1);
                 mpu.setThreshold(gyroT);
