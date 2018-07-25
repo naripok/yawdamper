@@ -131,7 +131,7 @@
  */
 
 #define DEBUG
-#define PROBE_PIN               PB11
+#define PROBE_PIN               PB12
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
 
@@ -201,7 +201,7 @@ MPU6050 mpu;
  */
 
 // Time step vars
-const double PID_FREQ = 168;
+const double PID_FREQ = 192;
 const double TIME_STEP = 1 / PID_FREQ;
 double gyroDot = 0.0;
 double input = 0.0;
@@ -574,10 +574,12 @@ void computePID(void) {
     // Calculates the output of the PID
     input = *usedAxis;
 
-    if (pid.Compute()) {
 #ifdef DEBUG
-        flipP1();
+    flipP1();
 #endif
+
+    if (pid.Compute()) {
+
 
         // Filter output for smoothness
         output = constrain(output - gain * gainG * 100 * (*usedGAxis - gyroDot), -G, G);
