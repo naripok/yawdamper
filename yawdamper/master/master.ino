@@ -108,6 +108,7 @@
 #include <EEPROM.h>
 #include <MPU6050.h>
 #include <PID_v1.h>
+#include <Filters.h>
 #include <Servo.h>
 #include <Wire.h>
 #include <libmaple/iwdg.h>
@@ -202,7 +203,6 @@ MPU6050 mpu;
 // Time step vars
 const double PID_FREQ = 168;
 const double TIME_STEP = 1 / PID_FREQ;
-
 double gyroDot = 0.0;
 double input = 0.0;
 double output = 0.0;
@@ -221,6 +221,8 @@ bool pidOn = false;                         // true if in automatic mode, false 
 
 // PID instance
 PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/3, pidMode);
+FilterOnePole accelFilter(LOWPASS, alpha);
+FilterOnePole gyroFilter(LOWPASS, alpha);
 
 
 // DISPLAY #############################################################################################################
@@ -353,13 +355,31 @@ void readSensor(void) {
     normG = mpu.readNormalizeGyro();
 
     // Apply exponential filtering to chosen axis
-    roll = (roll * (1 - alpha / 10) + sensorReverse * (alpha / 10) * (normA.XAxis - offsetRoll));
-    pitch = (pitch * (1 - alpha / 10) + sensorReverse * (alpha / 10) * (normA.YAxis - offsetPitch));
-    yaw = (yaw * (1 - alpha / 10) + sensorReverse * (alpha / 10) * (normA.ZAxis - offsetYaw));
+    switch (axis) {
+        case 0:
+            pitch = sensorReverse * (accelFilter.input(normA.YAxis) - offsetPitch);
+            gyroZ = sensorReverse * gyroFilter.input(normG.ZAxis);
+            break;
+        case 1:
+            roll = sensorReverse * (accelFilter.input(normA.XAxis) - offsetRoll);
+            gyroZ = sensorReverse * gyroFilter.input(normG.ZAxis);
+            break;
+        case 2:
+            yaw = sensorReverse * (accelFilter.input(normA.ZAxis) - offsetYaw);
+            gyroX = sensorReverse * gyroFilter.input(normG.XAxis);
+            break;
+        default:
+            break;
+    }
 
-    gyroX = (gyroX * (1 - alpha / 10) + sensorReverse * (alpha / 10) * normG.XAxis);
-    gyroY = (gyroY * (1 - alpha / 10) + sensorReverse * (alpha / 10) * normG.YAxis);
-    gyroZ = (gyroZ * (1 - alpha / 10) + sensorReverse * (alpha / 10) * normG.ZAxis);
+    // Apply exponential filtering to chosen axis
+//    roll = (roll * (1 - alpha / 10) + sensorReverse * (alpha / 10) * (normA.XAxis - offsetRoll));
+//    pitch = (pitch * (1 - alpha / 10) + sensorReverse * (alpha / 10) * (normA.YAxis - offsetPitch));
+//    yaw = (yaw * (1 - alpha / 10) + sensorReverse * (alpha / 10) * (normA.ZAxis - offsetYaw));
+//
+//    gyroX = (gyroX * (1 - alpha / 20) + sensorReverse * (alpha / 20) * normG.XAxis);
+//    gyroY = (gyroY * (1 - alpha / 20) + sensorReverse * (alpha / 20) * normG.YAxis);
+//    gyroZ = (gyroZ * (1 - alpha / 20) + sensorReverse * (alpha / 20) * normG.ZAxis);
 }
 
 
@@ -527,6 +547,8 @@ void cfgSensor(void) {
     displayMsg("Calibrando Gyro...");
     mpu.setThreshold(gyroT / 10);
     mpu.calibrateGyro(200);
+
+
 }
 
 
@@ -558,7 +580,7 @@ void computePID(void) {
 #endif
 
         // Filter output for smoothness
-        output = constrain(output - gainG * 100 * (*usedGAxis - gyroDot), -G, G);
+        output = constrain(output - gain * gainG * 100 * (*usedGAxis - gyroDot), -G, G);
 
         // save gyro n-1
         gyroDot = *usedGAxis;
@@ -588,6 +610,9 @@ void cfgPID(void) {
     pidMode = readEEPROM(PID_MODE_ADDRESS);
     gainG = readEEPROM(GAING_ADDRESS);
     output = trimValue;
+
+    accelFilter.setFrequency(alpha);
+    gyroFilter.setFrequency(alpha);
 
     pid.SetControllerDirection(pidMode);
     pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
@@ -1039,7 +1064,9 @@ void updateAdjusts(int direction) {
             pidMode = constrain(pidMode + direction * 1, 0, 1);
             pid.SetControllerDirection(pidMode);
         } else if (pidCalib == 5) {
-            alpha = constrain(alpha + direction * 0.01, 0, 1);
+            alpha = constrain(alpha + direction * 0.01, 0, 10);
+            accelFilter.setFrequency(alpha);
+            gyroFilter.setFrequency(alpha);
         } else if (pidCalib == 6) {
             sensorReverse = constrain(sensorReverse + direction * 2, -1, 1);
         } else if (pidCalib == 7) {
@@ -1075,9 +1102,12 @@ void updateAdjusts(int direction) {
         } else if (pidCalib == 4) {
             ;
         } else if (pidCalib == 5) {
-            alpha = constrain(alpha + direction * 0.01, 0, 1);
+            alpha = constrain(alpha + direction * 0.01, 0, 10);
+            accelFilter.setFrequency(alpha);
+            gyroFilter.setFrequency(alpha);
         } else if (pidCalib == 6) {
             ;
+
         } else if (pidCalib == 7) {
             ;
         } else if (pidCalib == 8) {
