@@ -154,7 +154,7 @@ volatile unsigned int i = 1;
 #define SCL                     PB6
 #define DLPF                    MPU6050_DLPF_6       // 5hz - 19ms delay
 
-#define SENSOR_IWDG             12000
+#define SENSOR_IWDG             13000
 #define T                       Timer2
 #define c                       2
 
@@ -220,9 +220,11 @@ bool pidOn = false;                         // true if in automatic mode, false 
 
 
 // PID instance
-PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD/3, pidMode);
+PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD / 3, pidMode);
 FilterOnePole accelFilter(LOWPASS, alpha);
+FilterOnePole accelFilter2(LOWPASS, alpha);
 FilterOnePole gyroFilter(LOWPASS, alpha);
+FilterOnePole gyroFilter2(LOWPASS, alpha);
 
 
 // DISPLAY #############################################################################################################
@@ -357,16 +359,16 @@ void readSensor(void) {
     // Apply exponential filtering to chosen axis
     switch (axis) {
         case 0:
-            pitch = sensorReverse * (accelFilter.input(normA.YAxis) - offsetPitch);
-            gyroZ = sensorReverse * gyroFilter.input(normG.ZAxis);
+            pitch = sensorReverse * (accelFilter2.input(accelFilter.input(normA.YAxis)) - offsetPitch);
+            gyroZ = sensorReverse * gyroFilter2.input(gyroFilter.input(normG.ZAxis));
             break;
         case 1:
-            roll = sensorReverse * (accelFilter.input(normA.XAxis) - offsetRoll);
-            gyroZ = sensorReverse * gyroFilter.input(normG.ZAxis);
+            roll = sensorReverse * (accelFilter2.input(accelFilter.input(normA.XAxis)) - offsetRoll);
+            gyroZ = sensorReverse * gyroFilter2.input(gyroFilter.input(normG.ZAxis));
             break;
         case 2:
-            yaw = sensorReverse * (accelFilter.input(normA.ZAxis) - offsetYaw);
-            gyroX = sensorReverse * gyroFilter.input(normG.XAxis);
+            yaw = sensorReverse * (accelFilter2.input(accelFilter.input(normA.ZAxis)) - offsetYaw);
+            gyroX = sensorReverse * gyroFilter2.input(gyroFilter.input(normG.XAxis));
             break;
         default:
             break;
@@ -614,10 +616,12 @@ void cfgPID(void) {
     output = trimValue;
 
     accelFilter.setFrequency(alpha);
+    accelFilter2.setFrequency(alpha);
     gyroFilter.setFrequency(alpha);
+    gyroFilter2.setFrequency(alpha);
 
     pid.SetControllerDirection(pidMode);
-    pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+    pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
 }
 
 
@@ -1005,14 +1009,14 @@ void updateAdjusts(int direction) {
         if (pidOn && !pidCalib) {
             gain = constrain(gain + direction * 0.01, 0, 1);
 
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
 
         } else if (pidCalib == 1) {
             KI = constrain(KI + direction * 0.01, 0, 3);
             KP = constrain(KP + direction * 0.02, 0, 6);
             KD = constrain(KD + direction * 0.01, 0, 3);
 
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
 
         } else if (pidCalib == 2) {
             gainG = constrain(gainG + direction * .01, 0, 1);
@@ -1028,14 +1032,14 @@ void updateAdjusts(int direction) {
     } else if ((millis() - pressTime) > 500) {
         if (pidOn && !pidCalib) {
             gain = constrain(gain + direction * 0.01, 0, 1);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
 
         } else if (pidCalib == 1) {
             KI = constrain(KI + direction * 0.01, 0, 3);
             KP = constrain(KP + direction * 0.02, 0, 6);
             KD = constrain(KD + direction * 0.01, 0, 3);
 
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
 
         } else if (pidCalib == 2) {
             gainG = constrain(gainG + direction * .01, 0, 1);
@@ -1052,23 +1056,25 @@ void updateAdjusts(int direction) {
         pressTime = millis();
         if (pidOn && !pidCalib) {
             gain = constrain(gain + direction * 0.01, 0, 1);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
         } else if (pidCalib == 1) {
             KP = constrain(KP + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
         } else if (pidCalib == 2) {
             KI = constrain(KI + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
         } else if (pidCalib == 3) {
             KD = constrain(KD + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
         } else if (pidCalib == 4) {
             pidMode = constrain(pidMode + direction * 1, 0, 1);
             pid.SetControllerDirection(pidMode);
         } else if (pidCalib == 5) {
             alpha = constrain(alpha + direction * 0.01, 0, 10);
             accelFilter.setFrequency(alpha);
+            accelFilter2.setFrequency(alpha);
             gyroFilter.setFrequency(alpha);
+            gyroFilter2.setFrequency(alpha);
         } else if (pidCalib == 6) {
             sensorReverse = constrain(sensorReverse + direction * 2, -1, 1);
         } else if (pidCalib == 7) {
@@ -1091,22 +1097,24 @@ void updateAdjusts(int direction) {
     } else if ((millis() - pressTime) > 500) {
         if (pidOn && !pidCalib) {
             gain = constrain(gain + direction * 0.01, 0, 1);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
         } else if (pidCalib == 1) {
             KP = constrain(KP + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
         } else if (pidCalib == 2) {
             KI = constrain(KI + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
         } else if (pidCalib == 3) {
             KD = constrain(KD + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
         } else if (pidCalib == 4) {
             ;
         } else if (pidCalib == 5) {
             alpha = constrain(alpha + direction * 0.01, 0, 10);
             accelFilter.setFrequency(alpha);
+            accelFilter2.setFrequency(alpha);
             gyroFilter.setFrequency(alpha);
+            gyroFilter2.setFrequency(alpha);
         } else if (pidCalib == 6) {
             ;
 
@@ -1161,7 +1169,7 @@ void readOnOff(void) {
                 } else {
 //                    trimValue = output;
                     output = output = trimValue;
-                    pid.SetTunings(gain*KP, gain*KI, gain*KD/3);
+                    pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
                     pid.SetMode(AUTOMATIC);
                     pidOn = true;
                 }
