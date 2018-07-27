@@ -870,13 +870,7 @@ void printPidTuning(void) {
     } else if (pidCalib == 5) {
         printBar("Gr gain:", 20, gainG);
     } else if (pidCalib == 6) {
-        display.setTextSize(2);
-        display.setTextColor(WHITE);
-        display.setCursor(22, 12);
-        display.println("Gr th:");
-        display.setCursor(38, 32);
-        display.println(gyroT);
-        display.display();
+        printBar("Gr th:", 32, gyroT);
     }
 
 #endif
