@@ -231,7 +231,7 @@ int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
 bool pidOn = false;                         // true if in automatic mode, false if in manual
 
 // PID instance
-PID pid(&input, &output, &setpoint, gain * KP, gain * KI, gain * KD, pidMode);
+PID pid(&input, &output, &setpoint, gain * KP * 50, gain * KI * 10, gain * KD * 10, pidMode);
 
 
 /** DISPLAY ############################################################################################################
