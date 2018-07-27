@@ -224,6 +224,8 @@ double KP = 0.0;                            // proportional
 double KI = 0.0;                            // integral
 double KD = 0.0;                            // derivative
 
+float nl = 0.0;
+
 int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
 
 bool pidOn = false;                         // true if in automatic mode, false if in manual
@@ -310,7 +312,7 @@ const unsigned long debounceDelay = 300;
 // EEPROM macros
 #define GYROT_ADDRESS           0x1F
 #define FAIL_ADDRESS            0x1E
-#define LASTSTATE_ADDRESS       0x1D
+#define NL_ADDRESS              0x1D
 #define GAING_ADDRESS           0x1C
 #define AXIS_ADDRESS            0x1B
 #define SENSOR_REVERSE_ADDRESS  0x1A
@@ -612,15 +614,13 @@ static inline float sgn(float val) {
 
 void computePID(void) {
     // Calculates the output of the PID
-    input = sgn(*usedAxis) * sq(*usedAxis);
+    input = constrain(sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl), -4 * G, 4 * G);
 
-#ifdef DEBUG
-    flipP1();
-#endif
+//#ifdef DEBUG
+//    flipP1();
+//#endif
 
     if (pid.Compute()) {
-
-
         // Filter output for smoothness
         output = constrain(output - gain * gainG * 50 * (*usedGAxis - gyroDot), -G, G);
 
@@ -651,6 +651,7 @@ void cfgPID(void) {
     KD = readEEPROM(KD_ADDRESS);
     pidMode = readEEPROM(PID_MODE_ADDRESS);
     gainG = readEEPROM(GAING_ADDRESS);
+    nl = readEEPROM(NL_ADDRESS);
     output = trimValue;
 
     accelPole1.setFrequency(alpha * 2);
@@ -824,10 +825,12 @@ void printPidTuning(void) {
     } else if (pidCalib == 4) {
         printBar("KI:", 52, KI);
     } else if (pidCalib == 5) {
-        printBar("Gr gain:", 20, gainG);
+        printBar("Power:", 28, nl);
     } else if (pidCalib == 6) {
-        printBar("Gr th:", 32, gyroT);
+        printBar("Gr gain:", 20, gainG);
     } else if (pidCalib == 7) {
+        printBar("Gr th:", 32, gyroT);
+    } else if (pidCalib == 8) {
         display.setCursor(28, 12);
         display.println("Input:");
         if (sensorReverse == 1) {
@@ -838,7 +841,7 @@ void printPidTuning(void) {
             display.println("Reverse");
         }
         display.display();
-    } else if (pidCalib == 8) {
+    } else if (pidCalib == 9) {
         display.setCursor(20, 12);
         display.println("Output:");
         if (pidMode == 0) {
@@ -849,13 +852,13 @@ void printPidTuning(void) {
             display.println("Reverse");
         }
         display.display();
-    } else if (pidCalib == 9) {
+    } else if (pidCalib == 10) {
         display.setCursor(36, 12);
         display.println("Axis:");
         display.setCursor(60, 32);
         display.println(axis);
         display.display();
-    } else if (pidCalib == 10) {
+    } else if (pidCalib == 11) {
         display.setCursor(36, 12);
         display.println("Fail:");
         display.setCursor(60, 32);
@@ -1040,7 +1043,7 @@ void updateAdjusts(int direction) {
         pressTime = millis();
         if (pidOn && !pidCalib) {
             gain = constrain(gain + direction * 0.01, 0, 1);
-            pid.SetTunings(gain * KP * 10, gain * KI * 10, gain * KD * 10);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 1) {
             alpha = constrain(alpha + direction * 0.01, 0, 1);
             accelPole1.setFrequency(alpha * 2);
@@ -1051,26 +1054,28 @@ void updateAdjusts(int direction) {
             gyroPole3.setFrequency(alpha * 4);
         } else if (pidCalib == 2) {
             KP = constrain(KP + direction * 0.01, 0, 1);
-            pid.SetTunings(gain * KP * 10, gain * KI * 10, gain * KD * 10);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 3) {
             KD = constrain(KD + direction * 0.01, 0, 1);
-            pid.SetTunings(gain * KP * 10, gain * KI * 10, gain * KD * 10);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 4) {
             KI = constrain(KI + direction * 0.01, 0, 1);
-            pid.SetTunings(gain * KP * 10, gain * KI * 10, gain * KD * 10);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 5) {
-            gainG = constrain(gainG + direction * .01, -1, 1);
+            nl = constrain(nl + direction * 0.01, 0, 1);
         } else if (pidCalib == 6) {
+            gainG = constrain(gainG + direction * .01, -1, 1);
+        } else if (pidCalib == 7) {
             gyroT = constrain(gyroT + direction * .01, 0, 1);
             mpu.setThreshold(gyroT / 10);
-        } else if (pidCalib == 7) {
-            sensorReverse = constrain(sensorReverse + direction * 2, -1, 1);
         } else if (pidCalib == 8) {
+            sensorReverse = constrain(sensorReverse + direction * 2, -1, 1);
+        } else if (pidCalib == 9) {
             pidMode = constrain(pidMode + direction * 1, 0, 1);
             pid.SetControllerDirection(pidMode);
-        } else if (pidCalib == 9) {
-            axis = constrain(axis + direction * 1, 0, 2);
         } else if (pidCalib == 10) {
+            axis = constrain(axis + direction * 1, 0, 2);
+        } else if (pidCalib == 11) {
             failCount = 0;
             writeEEPROM(FAIL_ADDRESS, failCount);
         } else {
@@ -1083,7 +1088,7 @@ void updateAdjusts(int direction) {
     } else if ((millis() - pressTime) > 500) {
         if (pidOn && !pidCalib) {
             gain = constrain(gain + direction * 0.01, 0, 1);
-            pid.SetTunings(gain * KP * 10, gain * KI * 10, gain * KD * 10);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 1) {
             alpha = constrain(alpha + direction * 0.01, 0, 1);
             accelPole1.setFrequency(alpha * 2);
@@ -1094,26 +1099,28 @@ void updateAdjusts(int direction) {
             gyroPole3.setFrequency(alpha * 4);
         } else if (pidCalib == 2) {
             KP = constrain(KP + direction * 0.01, 0, 1);
-            pid.SetTunings(gain * KP * 10, gain * KI * 10, gain * KD * 10);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 3) {
             KD = constrain(KD + direction * 0.01, 0, 1);
-            pid.SetTunings(gain * KP * 10, gain * KI * 10, gain * KD * 10);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 4) {
             KI = constrain(KI + direction * 0.01, 0, 1);
-            pid.SetTunings(gain * KP * 10, gain * KI * 10, gain * KD * 10);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 5) {
-            gainG = constrain(gainG + direction * .01, -1, 1);
+            nl = constrain(nl + direction * 0.01, 0, 1);
         } else if (pidCalib == 6) {
+            gainG = constrain(gainG + direction * .01, -1, 1);
+        } else if (pidCalib == 7) {
             gyroT = constrain(gyroT + direction * .01, 0, 1);
             mpu.setThreshold(gyroT / 10);
-        } else if (pidCalib == 7) {
-            ;
         } else if (pidCalib == 8) {
             ;
-
         } else if (pidCalib == 9) {
             ;
+
         } else if (pidCalib == 10) {
+            ;
+        } else if (pidCalib == 11) {
             ;
         } else {
             trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1157,7 +1164,7 @@ void readOnOff(void) {
                 } else {
 //                    trimValue = output;
                     output = output = trimValue;
-                    pid.SetTunings(gain * KP, gain * KI, gain * KD);
+                    pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
                     pid.SetMode(AUTOMATIC);
                     pidOn = true;
                 }
@@ -1180,10 +1187,10 @@ void readOnOff(void) {
             prevPidOnOff = pidOnOff;
         }
 #ifdef DEBUG
-        if (pidCalib != 10 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+        if (pidCalib != 11 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
             pidCalib++;
 
-        } else if (pidCalib == 10 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+        } else if (pidCalib == 11 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
 
             pidCalib = 0;
 
@@ -1196,6 +1203,7 @@ void readOnOff(void) {
             writeEEPROM(KI_ADDRESS, KI);
             writeEEPROM(KD_ADDRESS, KD);
             writeEEPROM(PID_MODE_ADDRESS, pidMode);
+            writeEEPROM(NL_ADDRESS, nl);
 
             // Update pointer to used axis
             if (axis == 0) {
@@ -1228,6 +1236,7 @@ void readOnOff(void) {
             writeEEPROM(KI_ADDRESS, KI);
             writeEEPROM(KD_ADDRESS, KD);
             writeEEPROM(PID_MODE_ADDRESS, pidMode);
+            writeEEPROM(NL_ADDRESS, nl);
 
             // Update pointer to used axis
             if (axis == 0) {
