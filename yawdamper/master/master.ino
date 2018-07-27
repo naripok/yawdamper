@@ -102,7 +102,6 @@
  * ALPHA = 30
  */
 
-
 #include <Arduino.h>
 #include <Adafruit_SSD1306.h>
 #include <EEPROM.h>
@@ -604,9 +603,16 @@ void cfgSensorWtdg(void) {
 
 
 // PID procedures ######################################################################################################
+static inline float sgn(float val) {
+    if (val < 0) return -1;
+    if (val==0) return 0;
+    return 1;
+}
+
+
 void computePID(void) {
     // Calculates the output of the PID
-    input = *usedAxis;
+    input = sgn(*usedAxis) * sq(*usedAxis);
 
 #ifdef DEBUG
     flipP1();
