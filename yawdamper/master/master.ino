@@ -102,7 +102,6 @@
  * ALPHA = 30
  */
 
-
 #include <Arduino.h>
 #include <Adafruit_SSD1306.h>
 #include <EEPROM.h>
@@ -144,7 +143,10 @@ volatile unsigned int i = 1;
 #define IWDG_PRESCALER          IWDG_PRE_256
 
 
-// SENSOR ##############################################################################################################
+/** SENSOR #############################################################################################################
+ *
+ * #####################################################################################################################
+ */
 // Sensor macros
 // #define SENSOR_SCL           PB6                  // m16
 // #define SENSOR_SDA           PB7                  // m15
@@ -164,29 +166,29 @@ const unsigned int SENSOR_MOD = 2;
 const unsigned int CALIBRATION_SAMPLES = 5000;                // calibration mean n of samples
 const float G = 9.80665;                             // gravity as written in the sensor header
 
-float pitch = 0;                            // pitch measurement
-float roll = 0;                             // roll measurement
-float yaw = 0;                              // yaw measurement
-
-float offsetPitch;                          // offset after calibration
-float offsetRoll;                           // offset after calibration
-float offsetYaw;                            // offset after calibration
+float pitch = 0.0;                            // pitch measurement
+float roll = 0.0;                             // roll measurement
+float yaw = 0.0;                              // yaw measurement
+float offsetPitch = 0.0;                          // offset after calibration
+float offsetRoll = 0.0;                           // offset after calibration
+float offsetYaw = 0.0;                            // offset after calibration
 //
 //float offsetGx;                             // offset after calibration
 //float offsetGy;                             // offset after calibration
 //float offsetGz;                             // offset after calibration
 
-float gyroX = 0;
-float gyroY = 0;
-float gyroZ = 0;
-
+float gyroX = 0.0;
+float gyroY = 0.0;
+float gyroZ = 0.0;
 float gyroThreshold = 0.0;
 
 float alpha = 1.0;                          // exponential filter decay
 float *usedAxis;                            // pointer to used axis
 float *usedGAxis;                            // pointer to used axis
+
 int axis = 0;                               // axis selection helper variable
 int sensorReverse = 1;
+
 volatile bool canRead = true;
 
 // Sensor instances
@@ -194,14 +196,22 @@ Vector normA;                                        // Accelerometer vector
 Vector normG;                                        // Gyro vector
 MPU6050 mpu;
 
+// Input filters
+FilterOnePole accelPole1(LOWPASS, alpha * 2);
+FilterOnePole accelPole2(LOWPASS, alpha * 3);
+FilterOnePole accelPole3(LOWPASS, alpha * 4);
+FilterOnePole gyroPole1(LOWPASS, alpha * 2);
+FilterOnePole gyroPole2(LOWPASS, alpha * 3);
+FilterOnePole gyroPole3(LOWPASS, alpha * 4);
+
 
 /** PID ################################################################################################################
  *
- * #####################################################################################################################*
+ * #####################################################################################################################
  */
 
 // Time step vars
-const double PID_FREQ = 192;
+const double PID_FREQ = 120;
 const double TIME_STEP = 1 / PID_FREQ;
 double gyroDot = 0.0;
 double input = 0.0;
@@ -214,20 +224,20 @@ double KP = 0.0;                            // proportional
 double KI = 0.0;                            // integral
 double KD = 0.0;                            // derivative
 
+float nl = 0.0;
+
 int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
 
 bool pidOn = false;                         // true if in automatic mode, false if in manual
 
-
 // PID instance
-PID pid(&input, &output, &setpoint, gain*KP, gain*KI, gain*KD / 3, pidMode);
-FilterOnePole accelFilter(LOWPASS, alpha);
-FilterOnePole accelFilter2(LOWPASS, alpha);
-FilterOnePole gyroFilter(LOWPASS, alpha);
-FilterOnePole gyroFilter2(LOWPASS, alpha);
+PID pid(&input, &output, &setpoint, gain * KP * 50, gain * KI * 10, gain * KD * 10, pidMode);
 
 
-// DISPLAY #############################################################################################################
+/** DISPLAY ############################################################################################################
+ *
+ * #####################################################################################################################
+ */
 // Display macros
 #define OLED_DC                 PB0  // 7
 #define OLED_CS                 SS  // 5
@@ -251,7 +261,10 @@ int pidCalib = 0;
 Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
 
-// SERVO ###############################################################################################################
+/** SERVO ##############################################################################################################
+ *
+ * #####################################################################################################################
+ */
 // Servo macros
 #define SERVO_PIN               PA8
 
@@ -266,7 +279,10 @@ float trimValue = 0;                        // value of output when pid is on ma
 Servo servo;
 
 
-// BUTTONS #############################################################################################################
+/** INTERFACE ##########################################################################################################
+ *
+ * #####################################################################################################################
+ */
 // Buttons macros
 #define ON_OFF_PIN              PB13
 #define PLUS_PIN                PB14
@@ -289,11 +305,14 @@ const unsigned long calibrationTime = 1000;
 const unsigned long debounceDelay = 300;
 
 
-// EEPROM ##############################################################################################################
+/** EEPROM #############################################################################################################
+ *
+ * #####################################################################################################################
+ */
 // EEPROM macros
 #define GYROT_ADDRESS           0x1F
 #define FAIL_ADDRESS            0x1E
-#define LASTSTATE_ADDRESS       0x1D
+#define NL_ADDRESS              0x1D
 #define GAING_ADDRESS           0x1C
 #define AXIS_ADDRESS            0x1B
 #define SENSOR_REVERSE_ADDRESS  0x1A
@@ -314,10 +333,11 @@ uint16 dataRead;
 uint16 eepromStatus;
 
 
-//// TIMER
+// TIMER
 //HardwareTimer sensorWtdg(4);
 
-// END MEMORY MANAGEMENT ###############################################################################################
+/** END MEMORY MANAGEMENT ##############################################################################################
+ */
 
 
 /**
@@ -359,16 +379,31 @@ void readSensor(void) {
     // Apply exponential filtering to chosen axis
     switch (axis) {
         case 0:
-            pitch = sensorReverse * (accelFilter2.input(accelFilter.input(normA.YAxis)) - offsetPitch);
-            gyroZ = sensorReverse * gyroFilter2.input(gyroFilter.input(normG.ZAxis));
+            pitch = sensorReverse * (
+                    accelPole3.input(
+                    accelPole2.input(
+                    accelPole1.input(
+                            normA.YAxis
+                    ))) - offsetPitch);
+            gyroZ = sensorReverse * gyroPole3.input(gyroPole2.input(gyroPole1.input(normG.ZAxis)));
             break;
         case 1:
-            roll = sensorReverse * (accelFilter2.input(accelFilter.input(normA.XAxis)) - offsetRoll);
-            gyroZ = sensorReverse * gyroFilter2.input(gyroFilter.input(normG.ZAxis));
+            roll = sensorReverse * (
+                    accelPole3.input(
+                    accelPole2.input(
+                    accelPole1.input(
+                            normA.XAxis
+                    ))) - offsetRoll);
+            gyroZ = sensorReverse * gyroPole3.input(gyroPole2.input(gyroPole1.input(normG.ZAxis)));
             break;
         case 2:
-            yaw = sensorReverse * (accelFilter2.input(accelFilter.input(normA.ZAxis)) - offsetYaw);
-            gyroX = sensorReverse * gyroFilter2.input(gyroFilter.input(normG.XAxis));
+            yaw = sensorReverse * (
+                    accelPole3.input(
+                    accelPole2.input(
+                    accelPole1.input(
+                            normA.ZAxis
+                    ))) - offsetYaw);
+            gyroX = sensorReverse * gyroPole3.input(gyroPole2.input(gyroPole1.input(normG.XAxis)));
             break;
         default:
             break;
@@ -549,8 +584,6 @@ void cfgSensor(void) {
     displayMsg("Calibrando Gyro...");
     mpu.setThreshold(gyroT / 10);
     mpu.calibrateGyro(200);
-
-
 }
 
 
@@ -572,19 +605,24 @@ void cfgSensorWtdg(void) {
 
 
 // PID procedures ######################################################################################################
+static inline float sgn(float val) {
+    if (val < 0) return -1;
+    if (val==0) return 0;
+    return 1;
+}
+
+
 void computePID(void) {
     // Calculates the output of the PID
-    input = *usedAxis;
+    input = constrain(sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl), -4 * G, 4 * G);
 
-#ifdef DEBUG
-    flipP1();
-#endif
+//#ifdef DEBUG
+//    flipP1();
+//#endif
 
     if (pid.Compute()) {
-
-
         // Filter output for smoothness
-        output = constrain(output - gain * gainG * 100 * (*usedGAxis - gyroDot), -G, G);
+        output = constrain(output - gain * gainG * 50 * (*usedGAxis - gyroDot), -G, G);
 
         // save gyro n-1
         gyroDot = *usedGAxis;
@@ -613,15 +651,18 @@ void cfgPID(void) {
     KD = readEEPROM(KD_ADDRESS);
     pidMode = readEEPROM(PID_MODE_ADDRESS);
     gainG = readEEPROM(GAING_ADDRESS);
+    nl = readEEPROM(NL_ADDRESS);
     output = trimValue;
 
-    accelFilter.setFrequency(alpha);
-    accelFilter2.setFrequency(alpha);
-    gyroFilter.setFrequency(alpha);
-    gyroFilter2.setFrequency(alpha);
+    accelPole1.setFrequency(alpha * 2);
+    accelPole2.setFrequency(alpha * 3);
+    accelPole3.setFrequency(alpha * 4);
+    gyroPole1.setFrequency(alpha * 2);
+    gyroPole2.setFrequency(alpha * 3);
+    gyroPole3.setFrequency(alpha * 4);
 
     pid.SetControllerDirection(pidMode);
-    pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+    pid.SetTunings(gain*KP, gain*KI, gain * KD);
 }
 
 
@@ -653,7 +694,7 @@ void refreshScreen(void) {
     if (pidCalib) {
         printPidTuning();
     } else if (pidOn && (plusB || minusB || (millis() - releaseTime) < 500)) {
-        printGain();
+        printBar("Gain:", 38, gain);
     } else if (e1 || e2 || e3){
         printError();
     } else {
@@ -744,87 +785,30 @@ void printControl(void) {
 }
 
 
-void printGain(void) {
+void printBar(String name, int offset, float value) {
     /* Prints the tuning on screen
     when there is a gain adjustment
     */
-    int offset = 12;
     display.clearDisplay();
     display.setTextSize(2);
     display.setTextColor(WHITE);
-    display.setCursor(35, 6);
-    display.print("GANHO");
+    display.setCursor(offset, 8);
+    display.print(name);
 
     display.setTextSize(1);
-    display.setCursor(2 + offset, 48);
+    display.setCursor(14, 48);
     display.print("0");
-    display.setCursor(122 - offset, 48);
+    display.setCursor(112, 48);
     display.print("1");
     display.setCursor(53, 48);
-    display.print(gain);
+    display.print(value);
 
     display.writeFastVLine(64, 40, 3, WHITE);
 
-    display.drawRect(4 + offset, 24, 121 - 2 * offset, 20, WHITE);
-    display.fillRect(4 + offset, 24, (1 + gain * (120 - 2 * offset)), 20, WHITE);
+    display.drawRect(16, 24, 97, 20, WHITE);
+    display.fillRect(16, 24, (1 + value * 96), 20, WHITE);
     display.display();
 }
-
-
-#ifndef DEBUG
-void printSensitivity(void) {
-    /* Prints the tuning on screen
-    when there is a gain adjustment
-    */
-    int offset = 12;
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setCursor(26, 10);
-    display.print("SENSIBILIDADE");
-
-    display.setTextSize(1);
-    display.setCursor(2 + offset, 48);
-    display.print("0");
-    display.setCursor(122 - offset, 48);
-    display.print("1");
-    display.setCursor(53, 48);
-    display.print(KD / 3);
-
-    display.writeFastVLine(64, 40, 3, WHITE);
-
-    display.drawRect(4 + offset, 24, 121 - 2 * offset, 20, WHITE);
-    display.fillRect(4 + offset, 24, (1 + KD / 3 * (120 - 2 * offset)), 20, WHITE);
-    display.display();
-}
-
-
-void printGyroGain(void) {
-    /* Prints the tuning on screen
-    when there is a gain adjustment
-    */
-    int offset = 12;
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setCursor(38, 10);
-    display.print("GYRO GAIN");
-
-    display.setTextSize(1);
-    display.setCursor(2 + offset, 48);
-    display.print("0");
-    display.setCursor(122 - offset, 48);
-    display.print("1");
-    display.setCursor(53, 48);
-    display.print(gainG);
-
-    display.writeFastVLine(64, 40, 3, WHITE);
-
-    display.drawRect(4 + offset, 24, 121 - 2 * offset, 20, WHITE);
-    display.fillRect(4 + offset, 24, (1 + gainG * (120 - 2 * offset)), 20, WHITE);
-    display.display();
-}
-#endif
 
 
 void printPidTuning(void) {
@@ -833,66 +817,69 @@ void printPidTuning(void) {
     display.setTextSize(2);
     display.setTextColor(WHITE);
     if (pidCalib == 1) {
-        display.setCursor(26, 24);
-        display.println("Kp:");
-        display.setCursor(60, 24);
-        display.println(KP);
+        printBar("CutOff:", 28, alpha);
     } else if (pidCalib == 2) {
-        display.setCursor(26, 24);
-        display.println("Ki:");
-        display.setCursor(60, 24);
-        display.println(KI);
+        printBar("KP:", 52, KP);
     } else if (pidCalib == 3) {
-        display.setCursor(26, 24);
-        display.println("Kd:");
-        display.setCursor(60, 24);
-        display.println(KD);
+        printBar("KD:", 52, KD);
     } else if (pidCalib == 4) {
-        display.setCursor(20, 12);
-        display.println("Reverse:");
-        display.setCursor(60, 32);
-        display.println(pidMode);
+        printBar("KI:", 52, KI);
     } else if (pidCalib == 5) {
-        display.setCursor(30, 12);
-        display.println("Alpha:");
-        display.setCursor(40, 32);
-        display.println(alpha);
+        printBar("Power:", 28, nl);
     } else if (pidCalib == 6) {
-        display.setCursor(22, 12);
-        display.println("Sensor");
-        display.setCursor(22, 32);
-        display.println("Rev:");
-        display.setCursor(68, 32);
-        display.println(sensorReverse);
+        printBar("Gr gain:", 20, gainG);
     } else if (pidCalib == 7) {
+        printBar("Gr th:", 32, gyroT);
+    } else if (pidCalib == 8) {
+        display.setCursor(28, 12);
+        display.println("Input:");
+        if (sensorReverse == 1) {
+            display.setCursor(24, 32);
+            display.println("Direct");
+        } else if (sensorReverse == -1) {
+            display.setCursor(20, 32);
+            display.println("Reverse");
+        }
+        display.display();
+    } else if (pidCalib == 9) {
+        display.setCursor(20, 12);
+        display.println("Output:");
+        if (pidMode == 0) {
+            display.setCursor(24, 32);
+            display.println("Direct");
+        } else if (pidMode == 1) {
+            display.setCursor(20, 32);
+            display.println("Reverse");
+        }
+        display.display();
+    } else if (pidCalib == 10) {
         display.setCursor(36, 12);
         display.println("Axis:");
         display.setCursor(60, 32);
         display.println(axis);
-    } else if (pidCalib == 8) {
-        display.setCursor(22, 12);
-        display.println("Gr gain:");
-        display.setCursor(38, 32);
-        display.println(gainG);
-    } else if (pidCalib == 9) {
-        display.setCursor(22, 12);
-        display.println("Gr th:");
-        display.setCursor(38, 32);
-        display.println(gyroT);
-    } else if (pidCalib == 10) {
-        display.setCursor(38, 12);
+        display.display();
+    } else if (pidCalib == 11) {
+        display.setCursor(36, 12);
         display.println("Fail:");
-        display.setCursor(50, 32);
+        display.setCursor(60, 32);
         display.println(failCount);
+        display.display();
     }
 
-    display.display();
 #else
+    display.clearDisplay();
     if (pidCalib == 1) {
-        printSensitivity();
-
+        printBar("CutOff:", 28, alpha);
     } else if (pidCalib == 2) {
-        printGyroGain();
+        printBar("KP:", 52, KP);
+    } else if (pidCalib == 3) {
+        printBar("KD:", 52, KD);
+    } else if (pidCalib == 4) {
+        printBar("KI:", 52, KI);
+    } else if (pidCalib == 5) {
+        printBar("Gr gain:", 20, gainG);
+    } else if (pidCalib == 6) {
+        printBar("Gr th:", 32, gyroT);
     }
 
 #endif
@@ -1009,14 +996,14 @@ void updateAdjusts(int direction) {
         if (pidOn && !pidCalib) {
             gain = constrain(gain + direction * 0.01, 0, 1);
 
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            pid.SetTunings(gain * KP, gain * KI, gain * KD);
 
         } else if (pidCalib == 1) {
             KI = constrain(KI + direction * 0.01, 0, 3);
             KP = constrain(KP + direction * 0.02, 0, 6);
             KD = constrain(KD + direction * 0.01, 0, 3);
 
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            pid.SetTunings(gain * KP, gain * KI, gain * KD);
 
         } else if (pidCalib == 2) {
             gainG = constrain(gainG + direction * .01, 0, 1);
@@ -1032,14 +1019,14 @@ void updateAdjusts(int direction) {
     } else if ((millis() - pressTime) > 500) {
         if (pidOn && !pidCalib) {
             gain = constrain(gain + direction * 0.01, 0, 1);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            pid.SetTunings(gain * KP, gain * KI, gain * KD);
 
         } else if (pidCalib == 1) {
             KI = constrain(KI + direction * 0.01, 0, 3);
             KP = constrain(KP + direction * 0.02, 0, 6);
             KD = constrain(KD + direction * 0.01, 0, 3);
 
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            pid.SetTunings(gain * KP, gain * KI, gain * KD);
 
         } else if (pidCalib == 2) {
             gainG = constrain(gainG + direction * .01, 0, 1);
@@ -1056,35 +1043,39 @@ void updateAdjusts(int direction) {
         pressTime = millis();
         if (pidOn && !pidCalib) {
             gain = constrain(gain + direction * 0.01, 0, 1);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 1) {
-            KP = constrain(KP + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            alpha = constrain(alpha + direction * 0.01, 0, 1);
+            accelPole1.setFrequency(alpha * 2);
+            accelPole2.setFrequency(alpha * 3);
+            accelPole3.setFrequency(alpha * 4);
+            gyroPole1.setFrequency(alpha * 2);
+            gyroPole2.setFrequency(alpha * 3);
+            gyroPole3.setFrequency(alpha * 4);
         } else if (pidCalib == 2) {
-            KI = constrain(KI + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            KP = constrain(KP + direction * 0.01, 0, 1);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 3) {
-            KD = constrain(KD + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            KD = constrain(KD + direction * 0.01, 0, 1);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 4) {
-            pidMode = constrain(pidMode + direction * 1, 0, 1);
-            pid.SetControllerDirection(pidMode);
+            KI = constrain(KI + direction * 0.01, 0, 1);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 5) {
-            alpha = constrain(alpha + direction * 0.01, 0, 10);
-            accelFilter.setFrequency(alpha);
-            accelFilter2.setFrequency(alpha);
-            gyroFilter.setFrequency(alpha);
-            gyroFilter2.setFrequency(alpha);
+            nl = constrain(nl + direction * 0.01, 0, 1);
         } else if (pidCalib == 6) {
-            sensorReverse = constrain(sensorReverse + direction * 2, -1, 1);
-        } else if (pidCalib == 7) {
-            axis = constrain(axis + direction * 1, 0, 2);
-        } else if (pidCalib == 8) {
             gainG = constrain(gainG + direction * .01, -1, 1);
-        } else if (pidCalib == 9) {
+        } else if (pidCalib == 7) {
             gyroT = constrain(gyroT + direction * .01, 0, 1);
             mpu.setThreshold(gyroT / 10);
+        } else if (pidCalib == 8) {
+            sensorReverse = constrain(sensorReverse + direction * 2, -1, 1);
+        } else if (pidCalib == 9) {
+            pidMode = constrain(pidMode + direction * 1, 0, 1);
+            pid.SetControllerDirection(pidMode);
         } else if (pidCalib == 10) {
+            axis = constrain(axis + direction * 1, 0, 2);
+        } else if (pidCalib == 11) {
             failCount = 0;
             writeEEPROM(FAIL_ADDRESS, failCount);
         } else {
@@ -1097,35 +1088,39 @@ void updateAdjusts(int direction) {
     } else if ((millis() - pressTime) > 500) {
         if (pidOn && !pidCalib) {
             gain = constrain(gain + direction * 0.01, 0, 1);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 1) {
-            KP = constrain(KP + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            alpha = constrain(alpha + direction * 0.01, 0, 1);
+            accelPole1.setFrequency(alpha * 2);
+            accelPole2.setFrequency(alpha * 3);
+            accelPole3.setFrequency(alpha * 4);
+            gyroPole1.setFrequency(alpha * 2);
+            gyroPole2.setFrequency(alpha * 3);
+            gyroPole3.setFrequency(alpha * 4);
         } else if (pidCalib == 2) {
-            KI = constrain(KI + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            KP = constrain(KP + direction * 0.01, 0, 1);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 3) {
-            KD = constrain(KD + direction * 0.01, 0, 9);
-            pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+            KD = constrain(KD + direction * 0.01, 0, 1);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 4) {
-            ;
+            KI = constrain(KI + direction * 0.01, 0, 1);
+            pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
         } else if (pidCalib == 5) {
-            alpha = constrain(alpha + direction * 0.01, 0, 10);
-            accelFilter.setFrequency(alpha);
-            accelFilter2.setFrequency(alpha);
-            gyroFilter.setFrequency(alpha);
-            gyroFilter2.setFrequency(alpha);
+            nl = constrain(nl + direction * 0.01, 0, 1);
         } else if (pidCalib == 6) {
-            ;
-
-        } else if (pidCalib == 7) {
-            ;
-        } else if (pidCalib == 8) {
             gainG = constrain(gainG + direction * .01, -1, 1);
-        } else if (pidCalib == 9) {
+        } else if (pidCalib == 7) {
             gyroT = constrain(gyroT + direction * .01, 0, 1);
             mpu.setThreshold(gyroT / 10);
+        } else if (pidCalib == 8) {
+            ;
+        } else if (pidCalib == 9) {
+            ;
+
         } else if (pidCalib == 10) {
+            ;
+        } else if (pidCalib == 11) {
             ;
         } else {
             trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1169,7 +1164,7 @@ void readOnOff(void) {
                 } else {
 //                    trimValue = output;
                     output = output = trimValue;
-                    pid.SetTunings(gain*KP, gain*KI, gain*KD / 3);
+                    pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10);
                     pid.SetMode(AUTOMATIC);
                     pidOn = true;
                 }
@@ -1192,10 +1187,10 @@ void readOnOff(void) {
             prevPidOnOff = pidOnOff;
         }
 #ifdef DEBUG
-        if (pidCalib != 10 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+        if (pidCalib != 11 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
             pidCalib++;
 
-        } else if (pidCalib == 10 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+        } else if (pidCalib == 11 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
 
             pidCalib = 0;
 
@@ -1208,6 +1203,7 @@ void readOnOff(void) {
             writeEEPROM(KI_ADDRESS, KI);
             writeEEPROM(KD_ADDRESS, KD);
             writeEEPROM(PID_MODE_ADDRESS, pidMode);
+            writeEEPROM(NL_ADDRESS, nl);
 
             // Update pointer to used axis
             if (axis == 0) {
@@ -1240,6 +1236,7 @@ void readOnOff(void) {
             writeEEPROM(KI_ADDRESS, KI);
             writeEEPROM(KD_ADDRESS, KD);
             writeEEPROM(PID_MODE_ADDRESS, pidMode);
+            writeEEPROM(NL_ADDRESS, nl);
 
             // Update pointer to used axis
             if (axis == 0) {
@@ -1350,8 +1347,9 @@ void cfgLED(void) {
 }
 
 
-/**
- * MAIN PROCEDURES #####################################################################################################
+/** MAIN PROCEDURES ####################################################################################################
+ *
+ * #####################################################################################################################
  */
 
 void setup() {
@@ -1410,8 +1408,9 @@ void loop() {
             feedSensorWtdg();
 
             readSensor();
+
+            computePID();
         }
-        computePID();
 
     } else if (i % DISPLAY_MOD == 0) {
         refreshScreen();
@@ -1419,7 +1418,6 @@ void loop() {
     } else if (i % B_MOD == 0) {
         processInterface();
         i = 1;
-
     }
 
     // Wait for loop to complete
