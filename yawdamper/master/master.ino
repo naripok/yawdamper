@@ -163,7 +163,7 @@ volatile unsigned int i = 1;
 
 // Sensor vars
 const unsigned int SENSOR_MOD = 2;
-const unsigned int CALIBRATION_SAMPLES = 5000;                // calibration mean n of samples
+const unsigned int CALIBRATION_SAMPLES = 10000;                // calibration mean n of samples
 const float G = 9.80665;                             // gravity as written in the sensor header
 
 float pitch = 0.0;                            // pitch measurement
@@ -941,14 +941,6 @@ void cfgDisplay(void) {
     display.begin(SSD1306_SWITCHCAPVCC);
 
     display.clearDisplay();
-    display.setTextSize(3);
-    display.setTextColor(WHITE);
-
-    display.setCursor(8, 8);
-    display.println("NOCTUA");
-
-    // Print
-    display.display();
 }
 
 
@@ -1065,7 +1057,7 @@ void updateAdjusts(int direction) {
             } else if (pidCalib == 5) {
                 nl = constrain(nl + direction * 0.01, 0, 1);
             } else if (pidCalib == 6) {
-                gainG = constrain(gainG + direction * .01, -1, 1);
+                gainG = constrain(gainG + direction * .01, 0, 1);
             } else if (pidCalib == 7) {
                 gyroT = constrain(gyroT + direction * .01, 0, 1);
                 mpu.setThreshold(gyroT / 10);
@@ -1110,7 +1102,7 @@ void updateAdjusts(int direction) {
             } else if (pidCalib == 5) {
                 nl = constrain(nl + direction * 0.01, 0, 1);
             } else if (pidCalib == 6) {
-                gainG = constrain(gainG + direction * .01, -1, 1);
+                gainG = constrain(gainG + direction * .01, 0, 1);
             } else if (pidCalib == 7) {
                 gyroT = constrain(gyroT + direction * .01, 0, 1);
                 mpu.setThreshold(gyroT / 10);
