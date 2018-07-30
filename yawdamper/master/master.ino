@@ -129,7 +129,7 @@
  * #####################################################################################################################
  */
 
-#define DEBUG
+//#define DEBUG
 #define PROBE_PIN               PB12
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
@@ -609,10 +609,6 @@ static inline float sgn(float val) {
 void computePID(void) {
     // Calculates the output of the PID
     input = constrain(sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl), -4 * G, 4 * G);
-
-//#ifdef DEBUG
-//    flipP1();
-//#endif
 
     if (pid.Compute()) {
         // Filter output for smoothness
@@ -1343,6 +1339,10 @@ void setup() {
 
 
 void loop() {
+
+#ifdef DEBUG
+    flipP1();
+#endif
 
     // Keep initial loop time
     time = micros();
