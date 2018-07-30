@@ -211,7 +211,7 @@ FilterOnePole gyroPole3(LOWPASS, alpha * 4);
  */
 
 // Time step vars
-const double PID_FREQ = 120;
+const double PID_FREQ = 166.6666;
 const double TIME_STEP = 1 / PID_FREQ;
 double gyroDot = 0.0;
 double input = 0.0;
@@ -611,6 +611,9 @@ void computePID(void) {
     input = constrain(sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl), -4 * G, 4 * G);
 
     if (pid.Compute()) {
+#ifdef DEBUG
+        flipP1();
+#endif
         // Filter output for smoothness
         output = constrain(output - gain * gainG * 50 * (*usedGAxis - gyroDot), -G, G);
 
@@ -1340,10 +1343,6 @@ void setup() {
 
 void loop() {
 
-#ifdef DEBUG
-    flipP1();
-#endif
-
     // Keep initial loop time
     time = micros();
 
@@ -1369,7 +1368,6 @@ void loop() {
 
     if (i % SENSOR_MOD == 0) {
         if (canRead) {
-
             // Feed the dogs...
             iwdg_feed();
             feedSensorWtdg();
