@@ -1000,11 +1000,11 @@ void updateAdjusts(int direction) {
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + direction * 0.01, 0, 1);
 
-                pid.SetTunings(gain * KP, gain * KI, gain * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10 * (1 + sensitivity));
 
             } else if (pidCalib == 1) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
-                pid.SetTunings(gain * KP, gain * KI, gain * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10 * (1 + sensitivity));
 
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
