@@ -225,8 +225,8 @@ double KI = 0.0;                            // integral
 double KD = 0.0;                            // derivative
 double sensitivity = 0.0;
 double nl = 0.0;
-double learningRate = 0.0;
-double prevOutput = 0.0;
+//double learningRate = 0.0;
+//double prevOutput = 0.0;
 
 int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
 
@@ -618,14 +618,14 @@ void computePID(void) {
         // Add gyro differential control
         output = constrain(output - gain * gainG * 50 * (*usedGAxis - gyroDot), -G, G);
 
-        // learn gain
-        if (learningRate > 0) {
-            gain = constrain(gain + 0.00001 * learningRate * input * (output - prevOutput), 0, 1);
-        }
+//        // learn gain
+//        if (learningRate > 0) {
+//            gain = constrain(gain + constrain(0.001 * learningRate * input * (output - prevOutput), -0.001, 0.001), 0, 1);
+//        }
 
         // save data for the next loop
         gyroDot = *usedGAxis;
-        prevOutput = output;
+//        prevOutput = output;
 
         // Converts the output to a value in degree and drive servo
         servo.write(convert_output(output));
@@ -651,7 +651,7 @@ void cfgPID(void) {
     gainG = readEEPROM(GAING_ADDRESS);
     nl = readEEPROM(NL_ADDRESS);
     sensitivity = readEEPROM(SENS_ADDRESS);
-    learningRate = readEEPROM(LR_ADDRESS);
+//    learningRate = readEEPROM(LR_ADDRESS);
     output = trimValue;
 
     accelPole1.setFrequency(alpha * 2);
@@ -862,8 +862,8 @@ void printPidTuning(void) {
         display.clearDisplay();
         if (pidCalib == 1) {
             printBar("Sensib:", 22, sensitivity);
-        } else if (pidCalib == 2) {
-            printBar("LR:", 50, learningRate);
+//        } else if (pidCalib == 2) {
+//            printBar("LR:", 50, learningRate);
         }
     }
 }
@@ -1007,8 +1007,8 @@ void updateAdjusts(int direction) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
                 pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
 
-            } else if (pidCalib == 2) {
-                learningRate = constrain(learningRate + direction * 0.01, 0, 1);
+//            } else if (pidCalib == 2) {
+//                learningRate = constrain(learningRate + direction * 0.01, 0, 1);
 
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1025,8 +1025,8 @@ void updateAdjusts(int direction) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
                 pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
 
-            } else if (pidCalib == 2) {
-                learningRate = constrain(learningRate + direction * 0.01, 0, 1);
+//            } else if (pidCalib == 2) {
+//                learningRate = constrain(learningRate + direction * 0.01, 0, 1);
 
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1229,14 +1229,14 @@ void readOnOff(void) {
             }
             prevPidOnOff = pidOnOff;
         } else {
-            if (pidCalib != 2 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+            if (pidCalib != 1 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
                 pidCalib++;
 
-            } else if (pidCalib == 2 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+            } else if (pidCalib == 1 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
 
                 pidCalib = 0;
 
-                writeEEPROM(LR_ADDRESS, learningRate);
+//                writeEEPROM(LR_ADDRESS, learningRate);
                 writeEEPROM(SENS_ADDRESS, sensitivity);
             }
             prevPidOnOff = pidOnOff;
