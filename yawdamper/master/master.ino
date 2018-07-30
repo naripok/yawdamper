@@ -999,7 +999,6 @@ void updateAdjusts(int direction) {
             pressTime = millis();
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + direction * 0.01, 0, 1);
-
                 pid.SetTunings(gain * KP * 50, gain * KI * 10, gain * KD * 10 * (1 + sensitivity));
 
             } else if (pidCalib == 1) {
@@ -1105,11 +1104,12 @@ void updateAdjusts(int direction) {
             } else if (pidCalib == 7) {
                 gyroT = constrain(gyroT + direction * .01, 0, 1);
                 mpu.setThreshold(gyroT / 10);
-            } else if (pidCalib == 8) { ;
-            } else if (pidCalib == 9) { ;
-
-            } else if (pidCalib == 10) { ;
-            } else if (pidCalib == 11) { ;
+            } else if (pidCalib == 8) {
+                ;
+            } else if (pidCalib == 9) {
+                ;
+            } else if (pidCalib == 10) {
+                ;
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
                 output = trimValue;
