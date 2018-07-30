@@ -224,9 +224,9 @@ double KP = 0.0;                            // proportional
 double KI = 0.0;                            // integral
 double KD = 0.0;                            // derivative
 double sensitivity = 0.0;
-
-float nl = 0.0;
-float learningRate = 0.0;
+double nl = 0.0;
+double learningRate = 0.0;
+double prevOutput = 0.0;
 
 int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
 
@@ -619,6 +619,11 @@ void computePID(void) {
         // Add gyro differential control
         output = constrain(output - gain * gainG * 50 * (*usedGAxis - gyroDot), -G, G);
 
+        // learn gain
+        if (learningRate > 0) {
+            gain = constrain(gain + 0.00001 * learningRate * input * (output - prevOutput), 0, 1);
+        }
+
         // save gyro n-1
         gyroDot = *usedGAxis;
 
@@ -646,6 +651,7 @@ void cfgPID(void) {
     gainG = readEEPROM(GAING_ADDRESS);
     nl = readEEPROM(NL_ADDRESS);
     sensitivity = readEEPROM(SENS_ADDRESS);
+    learningRate = readEEPROM(LR_ADDRESS);
     output = trimValue;
 
     accelPole1.setFrequency(alpha * 2);
@@ -857,11 +863,7 @@ void printPidTuning(void) {
         if (pidCalib == 1) {
             printBar("Sensib:", 22, sensitivity);
         } else if (pidCalib == 2) {
-            display.setCursor(16, 12);
-            display.println("Learning:");
-            display.setCursor(60, 32);
-            display.println(learningRate);
-            display.display();
+            printBar("LR:", 50, learningRate);
         }
     }
 }
@@ -1172,8 +1174,6 @@ void readOnOff(void) {
                     servo.write(pos);
                     pidOn = false;
                 } else {
-//                    trimValue = output;
-                    output = output = trimValue;
                     pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
                     pid.SetMode(AUTOMATIC);
                     pidOn = true;
@@ -1229,13 +1229,14 @@ void readOnOff(void) {
             }
             prevPidOnOff = pidOnOff;
         } else {
-            if (pidCalib != 1 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+            if (pidCalib != 2 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
                 pidCalib++;
 
-            } else if (pidCalib == 1 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
+            } else if (pidCalib == 2 && !pidOnOff && (pidOnOff != prevPidOnOff)) {
 
                 pidCalib = 0;
 
+                writeEEPROM(LR_ADDRESS, learningRate);
                 writeEEPROM(SENS_ADDRESS, sensitivity);
             }
             prevPidOnOff = pidOnOff;
