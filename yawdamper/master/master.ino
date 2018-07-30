@@ -611,11 +611,10 @@ static inline float sgn(float val) {
 void computePID(void) {
     // Calculates the output of the PID
     input = constrain(10 * gain * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl)), -6 * G, 6 * G);
-
-    if (pid.Compute()) {
 #ifdef DEBUG
-        flipP1();
+    flipP1();
 #endif
+    if (pid.Compute()) {
         // Add gyro differential control
         output = constrain(output - gain * gainG * 50 * (*usedGAxis - gyroDot), -G, G);
 
@@ -624,8 +623,9 @@ void computePID(void) {
             gain = constrain(gain + 0.00001 * learningRate * input * (output - prevOutput), 0, 1);
         }
 
-        // save gyro n-1
+        // save data for the next loop
         gyroDot = *usedGAxis;
+        prevOutput = output;
 
         // Converts the output to a value in degree and drive servo
         servo.write(convert_output(output));
