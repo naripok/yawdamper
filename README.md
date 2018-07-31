@@ -56,4 +56,4 @@ SERVO CONNECTOR
     PIN9 -> GND  
 
 ### TODO:
-    Better user interface
+    Gain auto tune
