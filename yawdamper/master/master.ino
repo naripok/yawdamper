@@ -213,6 +213,8 @@ FilterOnePole gyroPole3(LOWPASS, alpha * 4);
 // Time step vars
 const double PID_FREQ = 166.6666;
 const double TIME_STEP = 1 / PID_FREQ;
+const double ACCEL_MULTIPLIER = 10;
+const double GYRO_MULTIPLIER = 50;
 double gyroDot = 0.0;
 double input = 0.0;
 double output = 0.0;
@@ -225,8 +227,6 @@ double KI = 0.0;                            // integral
 double KD = 0.0;                            // derivative
 double sensitivity = 0.0;
 double nl = 0.0;
-//double learningRate = 0.0;
-//double prevOutput = 0.0;
 
 int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
 
@@ -610,18 +610,15 @@ static inline float sgn(float val) {
 
 void computePID(void) {
     // Calculates the output of the PID
-    input = constrain(10 * gain * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl)), -6 * G, 6 * G);
+    input = constrain(ACCEL_MULTIPLIER * gain * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl)), -6 * G, 6 * G);
+
 #ifdef DEBUG
     flipP1();
 #endif
+
     if (pid.Compute()) {
         // Add gyro differential control
-        output = constrain(output - gain * gainG * 50 * (*usedGAxis - gyroDot), -G, G);
-
-//        // learn gain
-//        if (learningRate > 0) {
-//            gain = constrain(gain + constrain(0.001 * learningRate * input * (output - prevOutput), -0.001, 0.001), 0, 1);
-//        }
+        output = constrain(output - gain * gainG * GYRO_MULTIPLIER * (*usedGAxis - gyroDot), -G, G);
 
         // save data for the next loop
         gyroDot = *usedGAxis;
@@ -651,7 +648,6 @@ void cfgPID(void) {
     gainG = readEEPROM(GAING_ADDRESS);
     nl = readEEPROM(NL_ADDRESS);
     sensitivity = readEEPROM(SENS_ADDRESS);
-//    learningRate = readEEPROM(LR_ADDRESS);
     output = trimValue;
 
     accelPole1.setFrequency(alpha * 2);
@@ -676,8 +672,6 @@ int convert_output(float output) {
 void cfgServo(void) {
     /* Configures the servo.
     */
-//    servo.attach(SERVO_PIN, 5000 - 2400, 5000 - 544, 0, 180);
-//    servo.attach(SERVO_PIN, 1000, 2000, 0, 180);
     servo.attach(SERVO_PIN, 800, 1800, 0, 180);
     servo.write(convert_output(trimValue));
 }
@@ -862,8 +856,6 @@ void printPidTuning(void) {
         display.clearDisplay();
         if (pidCalib == 1) {
             printBar("Sensib:", 22, sensitivity);
-//        } else if (pidCalib == 2) {
-//            printBar("LR:", 50, learningRate);
         }
     }
 }
@@ -1007,9 +999,6 @@ void updateAdjusts(int direction) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
                 pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
 
-//            } else if (pidCalib == 2) {
-//                learningRate = constrain(learningRate + direction * 0.01, 0, 1);
-
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
                 output = trimValue;
@@ -1024,9 +1013,6 @@ void updateAdjusts(int direction) {
             } else if (pidCalib == 1) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
                 pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
-
-//            } else if (pidCalib == 2) {
-//                learningRate = constrain(learningRate + direction * 0.01, 0, 1);
 
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1080,9 +1066,7 @@ void updateAdjusts(int direction) {
 
             } else if (pidCalib == 10) {
                 axis = constrain(axis + direction * 1, 0, 2);
-//            } else if (pidCalib == 11) {
-//                failCount = 0;
-//                writeEEPROM(FAIL_ADDRESS, failCount);
+
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
                 output = trimValue;
@@ -1236,7 +1220,6 @@ void readOnOff(void) {
 
                 pidCalib = 0;
 
-//                writeEEPROM(LR_ADDRESS, learningRate);
                 writeEEPROM(SENS_ADDRESS, sensitivity);
             }
             prevPidOnOff = pidOnOff;
