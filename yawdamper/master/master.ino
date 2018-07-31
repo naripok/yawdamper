@@ -218,6 +218,8 @@ const double PID_FREQ = 166.6666;
 const double TIME_STEP = 1 / PID_FREQ;
 const double ACCEL_MULTIPLIER = 10;
 const double GYRO_MULTIPLIER = 50;
+const double KD_MULTIPLIER = 0.5;
+
 double gyroDot = 0.0;
 double input = 0.0;
 double output = 0.0;
@@ -236,7 +238,7 @@ int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
 bool pidOn = false;                         // true if in automatic mode, false if in manual
 
 // PID instance
-PID pid(&input, &output, &setpoint, KP, KI, 0.1 * KD * (1 + sensitivity), pidMode);
+PID pid(&input, &output, &setpoint, KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity), pidMode);
 
 
 /** DISPLAY ############################################################################################################
@@ -655,7 +657,7 @@ void cfgPID(void) {
     gyroPole3.setFrequency(alpha * 4);
 
     pid.SetControllerDirection(pidMode);
-    pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
+    pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
 }
 
 
@@ -994,7 +996,7 @@ void updateAdjusts(int direction) {
 
             } else if (pidCalib == 1) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
+                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1009,7 +1011,7 @@ void updateAdjusts(int direction) {
 
             } else if (pidCalib == 1) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
+                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1034,15 +1036,15 @@ void updateAdjusts(int direction) {
 
             } else if (pidCalib == 2) {
                 KP = constrain(KP + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
+                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 3) {
                 KD = constrain(KD + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
+                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 4) {
                 KI = constrain(KI + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
+                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 5) {
                 nl = constrain(nl + direction * 0.01, 0, 1);
@@ -1086,15 +1088,15 @@ void updateAdjusts(int direction) {
 
             } else if (pidCalib == 2) {
                 KP = constrain(KP + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
+                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 3) {
                 KD = constrain(KD + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
+                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 4) {
                 KI = constrain(KI + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
+                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 5) {
                 nl = constrain(nl + direction * 0.01, 0, 1);
@@ -1155,7 +1157,7 @@ void readOnOff(void) {
                     servo.write(pos);
                     pidOn = false;
                 } else {
-                    pid.SetTunings(KP, KI, 0.1 * KD * (1 + sensitivity));
+                    pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
                     pid.SetMode(AUTOMATIC);
                     pidOn = true;
                 }
