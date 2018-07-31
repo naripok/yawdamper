@@ -354,10 +354,8 @@ uint16 eepromStatus;
  */
 
 // FAULT HANDLING ######################################################################################################
+#ifdef DEBUG
 #define LED_PIN                 PC13
-
-//volatile unsigned long failCount = 0;
-
 
 void cfgProbes(void) {
     pinMode(PROBE_PIN, OUTPUT);
@@ -369,7 +367,7 @@ void cfgProbes(void) {
 void flipP1(void) {
     digitalWrite(PROBE_PIN, !digitalRead(PROBE_PIN));
 }
-
+#endif
 
 // SENSOR PROCEDURES ###################################################################################################
 void readSensor(void) {
@@ -1301,6 +1299,7 @@ void cfgEEPROM(void) {
 
 
 // LED PROCEDURES ######################################################################################################
+#ifdef DEBUG
 void blinkLED(void) {
 //    digitalWrite(PB1, !digitalRead(PB1));
 //    digitalWrite(PB12, !digitalRead(PB12));
@@ -1317,7 +1316,7 @@ void cfgLED(void) {
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
 }
-
+#endif
 
 /** MAIN PROCEDURES ####################################################################################################
  *
