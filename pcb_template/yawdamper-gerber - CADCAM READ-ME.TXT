@@ -1,0 +1,87 @@
+LABCENTER PROTEUS TOOL INFORMATION FILE
+=======================================
+
+In case of difficulty, please e-mail support@labcenter.co.uk
+
+Tool set up for Proteus layout 'yawdamper.pdsprj'.
+CADCAM generated at 3:15:38 PM on Saturday, August 11, 2018.
+
+File List
+---------
+Top Copper              : yawdamper-gerber - CADCAM Top Copper.GBR
+Bottom Copper           : yawdamper-gerber - CADCAM Bottom Copper.GBR
+Top Silk Screen         : yawdamper-gerber - CADCAM Top Silk Screen.GBR
+Top Solder Resist       : yawdamper-gerber - CADCAM Top Solder Resist.GBR
+Bottom Solder Resist    : yawdamper-gerber - CADCAM Bottom Solder Resist.GBR
+Mechanical 1            : yawdamper-gerber - CADCAM Mechanical 1.GBR
+Top Assembly            : yawdamper-gerber - CADCAM Top Assembly.GBR
+Drill                   : yawdamper-gerber - CADCAM Drill.DRL
+Netlist                 : yawdamper-gerber - CADCAM Netlist.IPC
+
+Photoplotter Setup
+------------------
+Format: RS274X, ASCII, 4.3, metric, absolute, eob=*, LZO
+Notes:  D=Diameter, S=Side, W=Width, H=Height, C=Chamfer, I=Index
+
+D10	CIRCLE  D=1.016mm                                                         DRAW 
+D11	CIRCLE  D=0.762mm                                                         DRAW 
+D12	CIRCLE  D=0.635mm                                                         DRAW 
+D13	CIRCLE  D=1.27mm                                                          FLASH
+D14	CIRCLE  D=1.016mm                                                         FLASH
+D15	DIL     W=1.524mm             H=2.54mm              C=0.3048mm            FLASH
+D16	SQUARE  S=2.032mm                                                         FLASH
+D17	CIRCLE  D=2.032mm                                                         FLASH
+D18	CIRCLE  D=2.286mm                                                         FLASH
+D19	SQUARE  S=1.27mm                                                          FLASH
+D70	CIRCLE  D=1.778mm                                                         FLASH
+D71	SQUARE  S=1.778mm                                                         FLASH
+D20	CIRCLE  D=6.35mm                                                          FLASH
+D21	CIRCLE  D=0.2032mm                                                        DRAW 
+D22	CIRCLE  D=1.778mm                                                         DRAW 
+D23	DIL     W=2.54mm              H=1.524mm             C=0.3048mm            FLASH
+D24	CIRCLE  D=0.12mm                                                          DRAW 
+D25	CIRCLE  D=0.2mm                                                           DRAW 
+D26	CIRCLE  D=1.524mm                                                         FLASH
+D27	PPAD    W=1.778mm             H=2.794mm             I=0                   FLASH
+D28	PPAD    W=2.286mm             H=2.286mm             I=1                   FLASH
+D29	CIRCLE  D=2.54mm                                                          FLASH
+D72	PPAD    W=1.524mm             H=1.524mm             I=2                   FLASH
+D73	PPAD    W=2.032mm             H=2.032mm             I=3                   FLASH
+D30	CIRCLE  D=6.604mm                                                         FLASH
+D31	PPAD    W=2.794mm             H=1.778mm             I=4                   FLASH
+D32	CIRCLE  D=0.24079mm                                                       DRAW 
+D33	CIRCLE  D=0.22803mm                                                       DRAW 
+D34	CIRCLE  D=0.10668mm                                                       DRAW 
+D35	CIRCLE  D=0.16459mm                                                       DRAW 
+D36	CIRCLE  D=0.05mm                                                          DRAW 
+D37	CIRCLE  D=0.55166mm                                                       DRAW 
+D38	CIRCLE  D=0.33223mm                                                       DRAW 
+D39	CIRCLE  D=0.29633mm                                                       DRAW 
+D40	CIRCLE  D=0.18757mm                                                       DRAW 
+D41	CIRCLE  D=0.12191mm                                                       DRAW 
+D42	CIRCLE  D=0.127mm                                                         DRAW 
+D43	CIRCLE  D=0.0635mm                                                        DRAW 
+
+NC Drill Setup
+--------------
+Format: Excellon, ASCII, 4.3, metric, absolute, eob=<CR><LF>, no zero suppression.
+Notes:  Tool sizes are diameters. Layer sets are in brackets - 0=TOP, 15=BOTTOM, 1-14=INNER.
+
+T01	0.508mm (0-15) Plated
+T02	0.381mm (0-15) Plated
+T03	1mm (0-15) Plated
+T04	1.016mm (0-15) Plated
+T05	0.762mm (0-15) Plated
+T06	0.635mm (0-15) Plated
+T07	3mm (0-15) Plated
+
+Layer Stackup
+-------------
+Top Solder Resist        : 0.01016mm  Resist
+Top Copper               : 0.035mm    Copper
+Core                     : 1.6mm      FR4
+Bottom Copper            : 0.035mm    Copper
+Bottom Solder Resist     : 0.01016mm  Resist
+
+
+[END OF FILE]
