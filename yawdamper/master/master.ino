@@ -49,9 +49,9 @@
  *  OLED TODO
  *      PA4  -> RES
  *      PA5  -> SCK
+ *      PA6  -> CS
  *      PA7  -> SDA
  *      PB0  -> DC
- *      PA6  -> CS
  *
  *  BUTTONS
  *      PB13 -> MODE
@@ -138,7 +138,10 @@
  *
  * #####################################################################################################################
  */
-const unsigned long loopTime = 3000;
+#ifdef DEBUG
+unsigned int loopFreq;
+#endif
+const unsigned long loopTime = 2000;
 volatile unsigned int i = 1;
 
 // Watchdog
@@ -214,7 +217,7 @@ FilterOnePole gyroPole3(LOWPASS, alpha * 4);
  */
 
 // Time step vars
-const double PID_FREQ = 166.6666;
+const double PID_FREQ = 250; //166.6666;
 const double TIME_STEP = 1 / PID_FREQ;
 const double ACCEL_MULTIPLIER = 10;
 const double GYRO_MULTIPLIER = 50;
@@ -609,7 +612,7 @@ static inline float sgn(float val) {
 
 void computePID(void) {
     // Calculates the output of the PID
-    input = constrain(ACCEL_MULTIPLIER * gain * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl)), -6 * G, 6 * G);
+    input = constrain(ACCEL_MULTIPLIER * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl)), -6 * G, 6 * G);
 
 #ifdef DEBUG
     flipP1();
@@ -617,7 +620,7 @@ void computePID(void) {
 
     if (pid.Compute()) {
         // Add gyro differential control
-        output = constrain(output - gain * gainG * GYRO_MULTIPLIER * (*usedGAxis - gyroDot), -G, G);
+        output = constrain(gain * (output - gainG * GYRO_MULTIPLIER * (*usedGAxis - gyroDot)), -G, G);
 
         // save data for the next loop
         gyroDot = *usedGAxis;
@@ -671,7 +674,7 @@ int convert_output(float output) {
 void cfgServo(void) {
     /* Configures the servo.
     */
-    servo.attach(SERVO_PIN, 800, 1800, 0, 180);
+    servo.attach(SERVO_PIN, 1100, 2200, 0, 180);
     servo.write(convert_output(trimValue));
 }
 
@@ -734,10 +737,18 @@ void printControl(void) {
     }
 
     // Time counter
+
+#ifdef DEBUG
     display.setCursor(28 + xOffset, 4 + yOffset);
-    display.println("TON");
+    display.print("Freq");
+    display.setCursor(54 + xOffset, 4 + yOffset);
+    display.print(loopFreq);
+#else
+    display.setCursor(28 + xOffset, 4 + yOffset);
+    display.print("TON");
     display.setCursor(48 + xOffset, 4 + yOffset);
     display.println(systick_uptime() / 60000);
+#endif
 
     // Ball
     display.fillCircle(constrain(int(56.5 + *usedAxis * (400 / G)) + xOffset, 18 + xOffset, 94 + xOffset), 26 + yOffset, 8, WHITE);
@@ -1392,6 +1403,9 @@ void loop() {
     }
 
     // Wait for loop to complete
+#ifdef DEBUG
+    loopFreq = 1000000 / (micros() - time);
+#endif
     while ((micros() - time) < loopTime) {
         if (I2C1->state == I2C_STATE_ERROR) {
             canRead = false;
