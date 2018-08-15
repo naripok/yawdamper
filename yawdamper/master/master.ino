@@ -141,7 +141,7 @@
 #ifdef DEBUG
 unsigned int loopFreq;
 #endif
-const unsigned long loopTime = 2000;
+const unsigned long loopTime = 3000;
 volatile unsigned int i = 1;
 
 // Watchdog
@@ -217,7 +217,7 @@ FilterOnePole gyroPole3(LOWPASS, alpha * 4);
  */
 
 // Time step vars
-const double PID_FREQ = 250; //166.6666;
+const double PID_FREQ = 166.6666;
 const double TIME_STEP = 1 / PID_FREQ;
 const double ACCEL_MULTIPLIER = 10;
 const double GYRO_MULTIPLIER = 50;
@@ -241,7 +241,7 @@ int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
 bool pidOn = false;                         // true if in automatic mode, false if in manual
 
 // PID instance
-PID pid(&input, &output, &setpoint, KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity), pidMode);
+PID pid(&input, &output, &setpoint, gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity), pidMode);
 
 
 /** DISPLAY ############################################################################################################
@@ -612,7 +612,7 @@ static inline float sgn(float val) {
 
 void computePID(void) {
     // Calculates the output of the PID
-    input = constrain(ACCEL_MULTIPLIER * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl)), -6 * G, 6 * G);
+    input = constrain(ACCEL_MULTIPLIER * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl)), -20 * G, 20 * G);
 
 #ifdef DEBUG
     flipP1();
@@ -620,7 +620,7 @@ void computePID(void) {
 
     if (pid.Compute()) {
         // Add gyro differential control
-        output = constrain(gain * (output - gainG * GYRO_MULTIPLIER * (*usedGAxis - gyroDot)), -G, G);
+        output = constrain(output - gain * gainG * GYRO_MULTIPLIER * (*usedGAxis - gyroDot), -G, G);
 
         // save data for the next loop
         gyroDot = *usedGAxis;
@@ -660,7 +660,7 @@ void cfgPID(void) {
     gyroPole3.setFrequency(alpha * 4);
 
     pid.SetControllerDirection(pidMode);
-    pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+    pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 }
 
 
@@ -1004,10 +1004,11 @@ void updateAdjusts(int direction) {
             pressTime = millis();
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + direction * 0.01, 0, 1);
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 1) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1019,10 +1020,11 @@ void updateAdjusts(int direction) {
         } else if ((millis() - pressTime) > 500) {
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + direction * 0.01, 0, 1);
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 1) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1035,6 +1037,7 @@ void updateAdjusts(int direction) {
             pressTime = millis();
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + direction * 0.01, 0, 1);
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 1) {
                 alpha = constrain(alpha + direction * 0.01, 0, 1);
@@ -1047,15 +1050,15 @@ void updateAdjusts(int direction) {
 
             } else if (pidCalib == 2) {
                 KP = constrain(KP + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 3) {
                 KD = constrain(KD + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 4) {
                 KI = constrain(KI + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 5) {
                 nl = constrain(nl + direction * 0.01, 0, 1);
@@ -1087,6 +1090,7 @@ void updateAdjusts(int direction) {
         } else if ((millis() - pressTime) > 500) {
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + direction * 0.01, 0, 1);
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 1) {
                 alpha = constrain(alpha + direction * 0.01, 0, 1);
@@ -1099,15 +1103,15 @@ void updateAdjusts(int direction) {
 
             } else if (pidCalib == 2) {
                 KP = constrain(KP + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 3) {
                 KD = constrain(KD + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 4) {
                 KI = constrain(KI + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 5) {
                 nl = constrain(nl + direction * 0.01, 0, 1);
@@ -1168,7 +1172,7 @@ void readOnOff(void) {
                     servo.write(pos);
                     pidOn = false;
                 } else {
-                    pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                    pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
                     pid.SetMode(AUTOMATIC);
                     pidOn = true;
                 }
