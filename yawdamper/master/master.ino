@@ -129,7 +129,7 @@
  * #####################################################################################################################
  */
 
-#define DEBUG
+//#define DEBUG
 #define PROBE_PIN               PB12
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
@@ -141,7 +141,7 @@
 #ifdef DEBUG
 unsigned int loopFreq;
 #endif
-const unsigned long loopTime = 3000;
+const unsigned long loopTime = 1999;
 volatile unsigned int i = 1;
 
 // Watchdog
@@ -217,7 +217,7 @@ FilterOnePole gyroPole3(LOWPASS, alpha * 4);
  */
 
 // Time step vars
-const double PID_FREQ = 166.6666;
+const double PID_FREQ = 250; //166.6666;
 const double TIME_STEP = 1 / PID_FREQ;
 const double ACCEL_MULTIPLIER = 10;
 const double GYRO_MULTIPLIER = 50;
@@ -743,6 +743,7 @@ void printControl(void) {
     display.print("Freq");
     display.setCursor(54 + xOffset, 4 + yOffset);
     display.print(loopFreq);
+//    display.print(input);
 #else
     display.setCursor(28 + xOffset, 4 + yOffset);
     display.print("TON");
@@ -1406,10 +1407,11 @@ void loop() {
         i = 1;
     }
 
-    // Wait for loop to complete
 #ifdef DEBUG
     loopFreq = 1000000 / (micros() - time);
 #endif
+
+    // Wait for loop to complete
     while ((micros() - time) < loopTime) {
         if (I2C1->state == I2C_STATE_ERROR) {
             canRead = false;
@@ -1417,4 +1419,6 @@ void loop() {
             break;
         }
     }
+
+
 } // END LOOP
