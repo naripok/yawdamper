@@ -129,7 +129,7 @@
  * #####################################################################################################################
  */
 
-//#define DEBUG
+#define DEBUG
 #define PROBE_PIN               PB12
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
@@ -221,7 +221,7 @@ const double PID_FREQ = 166.6666;
 const double TIME_STEP = 1 / PID_FREQ;
 const double ACCEL_MULTIPLIER = 10;
 const double GYRO_MULTIPLIER = 50;
-const double KD_MULTIPLIER = 0.5;
+const double KD_MULTIPLIER = 0.3;
 
 double gyroDot = 0.0;
 double input = 0.0;
@@ -612,7 +612,7 @@ static inline float sgn(float val) {
 
 void computePID(void) {
     // Calculates the output of the PID
-    input = constrain(ACCEL_MULTIPLIER * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl)), -20 * G, 20 * G);
+    input = ACCEL_MULTIPLIER * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl));
 
 #ifdef DEBUG
     flipP1();
