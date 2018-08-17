@@ -129,7 +129,7 @@
  * #####################################################################################################################
  */
 
-//#define DEBUG
+#define DEBUG
 #define PROBE_PIN               PB12
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
