@@ -129,7 +129,7 @@
  * #####################################################################################################################
  */
 
-//#define DEBUG
+#define DEBUG
 #define PROBE_PIN               PB12
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
@@ -141,11 +141,11 @@
 #ifdef DEBUG
 unsigned int loopFreq;
 #endif
-const unsigned long loopTime = 2000;
+const unsigned long loopTime = 1999;
 volatile unsigned int i = 1;
 
 // Watchdog
-#define IWDG_NUM                210
+#define IWDG_NUM                210 //210
 #define IWDG_PRESCALER          IWDG_PRE_256
 
 
@@ -221,7 +221,7 @@ const double PID_FREQ = 250; //166.6666;
 const double TIME_STEP = 1 / PID_FREQ;
 const double ACCEL_MULTIPLIER = 10;
 const double GYRO_MULTIPLIER = 50;
-const double KD_MULTIPLIER = 0.5;
+const double KD_MULTIPLIER = 0.3;
 
 double gyroDot = 0.0;
 double input = 0.0;
@@ -241,7 +241,7 @@ int pidMode = 0;                            // 0 -> DIRECT, 1 -> REVERSE
 bool pidOn = false;                         // true if in automatic mode, false if in manual
 
 // PID instance
-PID pid(&input, &output, &setpoint, KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity), pidMode);
+PID pid(&input, &output, &setpoint, gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity), pidMode);
 
 
 /** DISPLAY ############################################################################################################
@@ -476,6 +476,9 @@ void recoverSensor(void) {
     // Power cycle MPU for fresh start
     digitalWrite(SENSOR_VCC, LOW);
 
+    i2c_disable(I2C1);
+    i2c_master_enable(I2C1, I2C_BUS_RESET);
+
     // Turn sensor off and wait for 100ms while feeding the watchdogs
     for (int i = 0; i < 100; i++) {
         feedSensorWtdg();
@@ -514,6 +517,12 @@ void recoverSensor(void) {
     mpu.writeRegister8(0x23, 0b00000000);                                   // Disable FIFO queues
 
     mpu.setThreshold(gyroT / 10);
+
+    for (int i = 0; i < 10; i++) {
+        feedSensorWtdg();
+        iwdg_feed();
+        delay(1);
+    }
 
     // update fail counter
 //    writeEEPROM(FAIL_ADDRESS, failCount++);
@@ -612,15 +621,11 @@ static inline float sgn(float val) {
 
 void computePID(void) {
     // Calculates the output of the PID
-    input = constrain(ACCEL_MULTIPLIER * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl)), -6 * G, 6 * G);
-
-#ifdef DEBUG
-    flipP1();
-#endif
+    input = ACCEL_MULTIPLIER * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl));
 
     if (pid.Compute()) {
         // Add gyro differential control
-        output = constrain(gain * (output - gainG * GYRO_MULTIPLIER * (*usedGAxis - gyroDot)), -G, G);
+        output = constrain(output - gain * gainG * GYRO_MULTIPLIER * (*usedGAxis - gyroDot), -G, G);
 
         // save data for the next loop
         gyroDot = *usedGAxis;
@@ -660,7 +665,7 @@ void cfgPID(void) {
     gyroPole3.setFrequency(alpha * 4);
 
     pid.SetControllerDirection(pidMode);
-    pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+    pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 }
 
 
@@ -743,6 +748,7 @@ void printControl(void) {
     display.print("Freq");
     display.setCursor(54 + xOffset, 4 + yOffset);
     display.print(loopFreq);
+//    display.print(input);
 #else
     display.setCursor(28 + xOffset, 4 + yOffset);
     display.print("TON");
@@ -1004,10 +1010,11 @@ void updateAdjusts(int direction) {
             pressTime = millis();
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + direction * 0.01, 0, 1);
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 1) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1019,10 +1026,11 @@ void updateAdjusts(int direction) {
         } else if ((millis() - pressTime) > 500) {
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + direction * 0.01, 0, 1);
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 1) {
                 sensitivity = constrain(sensitivity + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else {
                 trimValue = constrain(trimValue - direction * 0.1, -G, G);
@@ -1035,6 +1043,7 @@ void updateAdjusts(int direction) {
             pressTime = millis();
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + direction * 0.01, 0, 1);
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 1) {
                 alpha = constrain(alpha + direction * 0.01, 0, 1);
@@ -1047,15 +1056,15 @@ void updateAdjusts(int direction) {
 
             } else if (pidCalib == 2) {
                 KP = constrain(KP + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 3) {
                 KD = constrain(KD + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 4) {
                 KI = constrain(KI + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 5) {
                 nl = constrain(nl + direction * 0.01, 0, 1);
@@ -1087,6 +1096,7 @@ void updateAdjusts(int direction) {
         } else if ((millis() - pressTime) > 500) {
             if (pidOn && !pidCalib) {
                 gain = constrain(gain + direction * 0.01, 0, 1);
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 1) {
                 alpha = constrain(alpha + direction * 0.01, 0, 1);
@@ -1099,15 +1109,15 @@ void updateAdjusts(int direction) {
 
             } else if (pidCalib == 2) {
                 KP = constrain(KP + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 3) {
                 KD = constrain(KD + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 4) {
                 KI = constrain(KI + direction * 0.01, 0, 1);
-                pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
 
             } else if (pidCalib == 5) {
                 nl = constrain(nl + direction * 0.01, 0, 1);
@@ -1168,7 +1178,7 @@ void readOnOff(void) {
                     servo.write(pos);
                     pidOn = false;
                 } else {
-                    pid.SetTunings(KP, KI, KD_MULTIPLIER * KD * (1 + sensitivity));
+                    pid.SetTunings(gain * KP, gain * KI, gain * KD_MULTIPLIER * KD * (1 + sensitivity));
                     pid.SetMode(AUTOMATIC);
                     pidOn = true;
                 }
@@ -1359,7 +1369,9 @@ void setup() {
 
 
 void loop() {
-
+//#ifdef DEBUG
+//    flipP1();
+//#endif
     // Keep initial loop time
     time = micros();
 
@@ -1367,19 +1379,6 @@ void loop() {
     i++;
 
     if (!canRead) {
-        i2c_disable(I2C1);
-        i2c_master_enable(I2C1, I2C_BUS_RESET);
-
-        recoverSensor();
-
-        for (int i = 0; i < 10; i++) {
-            feedSensorWtdg();
-            iwdg_feed();
-            delay(1);
-        }
-
-        i = 1;
-        canRead = true;
 
     }
 
@@ -1392,6 +1391,12 @@ void loop() {
             readSensor();
 
             computePID();
+
+        } else {
+            recoverSensor();
+
+            i = 1;
+            canRead = true;
         }
 
     } else if (i % DISPLAY_MOD == 0) {
@@ -1403,9 +1408,6 @@ void loop() {
     }
 
     // Wait for loop to complete
-#ifdef DEBUG
-    loopFreq = 1000000 / (micros() - time);
-#endif
     while ((micros() - time) < loopTime) {
         if (I2C1->state == I2C_STATE_ERROR) {
             canRead = false;
@@ -1413,4 +1415,10 @@ void loop() {
             break;
         }
     }
+#ifdef DEBUG
+    loopFreq = 1000000 / (micros() - time);
+#endif
+#ifdef DEBUG
+    flipP1();
+#endif
 } // END LOOP
