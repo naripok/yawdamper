@@ -145,7 +145,7 @@ const unsigned long loopTime = 1999;
 volatile unsigned int i = 1;
 
 // Watchdog
-#define IWDG_NUM                210
+#define IWDG_NUM                210 //210
 #define IWDG_PRESCALER          IWDG_PRE_256
 
 
@@ -476,6 +476,9 @@ void recoverSensor(void) {
     // Power cycle MPU for fresh start
     digitalWrite(SENSOR_VCC, LOW);
 
+    i2c_disable(I2C1);
+    i2c_master_enable(I2C1, I2C_BUS_RESET);
+
     // Turn sensor off and wait for 100ms while feeding the watchdogs
     for (int i = 0; i < 100; i++) {
         feedSensorWtdg();
@@ -514,6 +517,12 @@ void recoverSensor(void) {
     mpu.writeRegister8(0x23, 0b00000000);                                   // Disable FIFO queues
 
     mpu.setThreshold(gyroT / 10);
+
+    for (int i = 0; i < 10; i++) {
+        feedSensorWtdg();
+        iwdg_feed();
+        delay(1);
+    }
 
     // update fail counter
 //    writeEEPROM(FAIL_ADDRESS, failCount++);
@@ -613,10 +622,6 @@ static inline float sgn(float val) {
 void computePID(void) {
     // Calculates the output of the PID
     input = ACCEL_MULTIPLIER * (sgn(*usedAxis) * pow(abs(*usedAxis), 1 + nl));
-
-#ifdef DEBUG
-    flipP1();
-#endif
 
     if (pid.Compute()) {
         // Add gyro differential control
@@ -1364,7 +1369,9 @@ void setup() {
 
 
 void loop() {
-
+//#ifdef DEBUG
+//    flipP1();
+//#endif
     // Keep initial loop time
     time = micros();
 
@@ -1372,19 +1379,6 @@ void loop() {
     i++;
 
     if (!canRead) {
-        i2c_disable(I2C1);
-        i2c_master_enable(I2C1, I2C_BUS_RESET);
-
-        recoverSensor();
-
-        for (int i = 0; i < 10; i++) {
-            feedSensorWtdg();
-            iwdg_feed();
-            delay(1);
-        }
-
-        i = 1;
-        canRead = true;
 
     }
 
@@ -1397,6 +1391,12 @@ void loop() {
             readSensor();
 
             computePID();
+
+        } else {
+            recoverSensor();
+
+            i = 1;
+            canRead = true;
         }
 
     } else if (i % DISPLAY_MOD == 0) {
@@ -1407,10 +1407,6 @@ void loop() {
         i = 1;
     }
 
-#ifdef DEBUG
-    loopFreq = 1000000 / (micros() - time);
-#endif
-
     // Wait for loop to complete
     while ((micros() - time) < loopTime) {
         if (I2C1->state == I2C_STATE_ERROR) {
@@ -1419,6 +1415,10 @@ void loop() {
             break;
         }
     }
-
-
+#ifdef DEBUG
+    loopFreq = 1000000 / (micros() - time);
+#endif
+#ifdef DEBUG
+    flipP1();
+#endif
 } // END LOOP
