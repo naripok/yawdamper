@@ -129,7 +129,7 @@
  * #####################################################################################################################
  */
 
-#define DEBUG
+/* #define DEBUG */
 #define PROBE_PIN               PB12
 #define DEBUG_LEVEL DEBUG_NONE
 //#define I2C_DEBUG
@@ -250,8 +250,10 @@ PID pid(&input, &output, &setpoint, gain * KP, gain * KI, gain * KD_MULTIPLIER *
  */
 // Display macros
 #define OLED_DC                 PB0  // 7
-#define OLED_CS                 SS  // 5
-#define OLED_RESET              MISO  // 8
+#define OLED_CS                 PA6  // 7
+#define OLED_RESET              PA4  // 8
+/* #define OLED_CS                 SS  // 5 */
+/* #define OLED_RESET              MISO  // 8 */
 
 // Display vars
 const int DISPLAY_MOD = 3;
@@ -724,6 +726,9 @@ void printControl(void) {
 
     // Activity viewer
     if (j == 0) {
+#ifdef DEBUG
+        blinkLED();
+#endif
         display.setCursor(20 + xOffset, 4 + yOffset);
         display.println("|");
         j++;
@@ -1346,8 +1351,8 @@ void cfgLED(void) {
  */
 
 void setup() {
-//    cfgLED();
 #ifdef DEBUG
+    cfgLED();
     cfgProbes();
 #endif
 

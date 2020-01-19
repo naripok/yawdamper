@@ -57,3 +57,20 @@ SERVO CONNECTOR
 
 ### TODO:
     Gain auto tune
+
+
+## Compiling
+
+install libraries and hardware on ~/Arduino
+install arduino-cli
+
+> arduino-cli core install arduino:samd
+> arduino-cli core install STM32:stm32
+
+> arduino-cli compile --fqbn STM32:STM32F1:genericSTM32F103C yawdamper/master
+
+## Uploading
+
+install dfu-util
+
+> dfup yawdamper/master/master.stm32.stm32f1.genericstm32f103c.bin
